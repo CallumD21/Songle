@@ -30,7 +30,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback,
     private lateinit var mGoogleApiClient: GoogleApiClient
     val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
     var mLocationPermissionGranted = false
-    private lateinit var mLastLocation : Location
+    private var mLastLocation : Location? = null
     val TAG = "MapsActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
