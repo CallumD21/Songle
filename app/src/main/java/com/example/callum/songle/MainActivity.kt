@@ -90,6 +90,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 startActivity(intent)
                 return true
             }
+            R.id.action_achievement -> {
+                //Open the Achievement Activity
+                val intent = Intent(this,AchievementActivity::class.java)
+                startActivity(intent)
+                return true
+            }
             else -> return super.onOptionsItemSelected(item)
         }
     }
