@@ -36,13 +36,14 @@
             app:elevation="6dp" />
 
         <TextView
-            android:id="@+id/text"
+            android:id="@+id/fab_text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:elevation="7dp"
+            android:text="@string/fab_text"
             android:textColor="@android:color/white"
-            android:text="@string/fab_text" />
+            android:visibility="visible" />
 
     </FrameLayout>
 
