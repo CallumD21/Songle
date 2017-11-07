@@ -15,7 +15,6 @@ class AchievementActivity : AppCompatActivity() {
 
     private fun setupActionBar() {
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        supportActionBar?.setTitle("Achievements")
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val id = item.itemId

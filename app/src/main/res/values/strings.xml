@@ -92,4 +92,6 @@
     <string name="ach8_text1">Collect all the words</string>
     <string name="ach8_text2">to a song</string>
     <string name="fab_text">Collect</string>
+    <string name="author">By Callum Dickinson</string>
+    <string name="nav_guess">Guess the song</string>
 </resources>
