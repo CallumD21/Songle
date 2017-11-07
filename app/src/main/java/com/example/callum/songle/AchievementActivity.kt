@@ -1,19 +1,29 @@
 package com.example.callum.songle
 
-import android.os.Bundle
-import android.support.design.widget.Snackbar
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
-import kotlinx.android.synthetic.main.activity_scrolling.*
+import android.os.Bundle
+import android.view.MenuItem
 
 class AchievementActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_scrolling)
-        setSupportActionBar(toolbar)
-        fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
+        setContentView(R.layout.activity_achievement)
+        setupActionBar()
+    }
+
+    private fun setupActionBar() {
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setTitle("Achievements")
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val id = item.itemId
+        if (id == android.R.id.home) {
+            val intent = Intent(this,MainActivity::class.java)
+            startActivity(intent)
+            return true
         }
+        return super.onOptionsItemSelected(item)
     }
 }
