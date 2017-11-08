@@ -139,6 +139,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                 }.show()
             }
+            R.id.nav_walk -> {
+                val dialog = AlertDialog.Builder(this).create()
+                dialog.setView(View.inflate(this,R.layout.incorrect,null))
+                dialog.show()
+            }
         }
         return true
     }

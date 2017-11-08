@@ -102,4 +102,7 @@
     <string name="submit">Submit</string>
     <string name="collected_words">Collected Words</string>
     <string name="guessed_songs">Guessed Songs</string>
+    <string name="correct">Correct, Well Done!</string>
+    <string name="next">Next</string>
+    <string name="inccorrect">Unlucky, Try Again!</string>
 </resources>
