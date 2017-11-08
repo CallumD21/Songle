@@ -5,7 +5,19 @@
 
     <item
         android:id="@+id/nav_guess"
-        android:checkable="false"
         android:title="@string/nav_guess"/>
+    <item
+        android:id="@+id/nav_words"
+        android:title="@string/nav_words" />
+    <item
+        android:id="@+id/nav_songs"
+        android:title="@string/nav_songs" />
+    <item
+        android:id="@+id/nav_giveup"
+        android:title="@string/nav_giveup" />
+    <item
+        android:id="@+id/nav_walk"
+        android:icon="@drawable/ic_directions_walk_black_24dp"
+        android:title="0 steps" />
 
 </menu>

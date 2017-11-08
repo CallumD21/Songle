@@ -94,4 +94,7 @@
     <string name="fab_text">Collect</string>
     <string name="author">By Callum Dickinson</string>
     <string name="nav_guess">Guess the song</string>
+    <string name="nav_words">Collected words</string>
+    <string name="nav_songs">Guessed songs</string>
+    <string name="nav_giveup">Give up</string>
 </resources>

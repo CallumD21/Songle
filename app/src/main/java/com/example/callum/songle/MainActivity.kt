@@ -1,6 +1,7 @@
 package com.example.callum.songle
 
 import android.Manifest
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
@@ -11,6 +12,7 @@ import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
+import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
@@ -105,8 +107,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Handle navigation view item clicks here.
         when (item.itemId) {
             R.id.nav_guess -> {
-                // Handle the camera action
                 Log.d("MYAPP","Pressed guess")
+            }
+            R.id.nav_walk -> {
+                Log.d("MYAPP","Pressed walk")
+            }
+            R.id.nav_words -> {
+                Log.d("MYAPP","Pressed words")
+            }
+            R.id.nav_songs -> {
+                Log.d("MYAPP","Pressed songs")
+            }
+            R.id.nav_giveup -> {
+                //If the press give up open a dialog
+                Log.d("MYAPP","Pressed give up")
             }
         }
 
