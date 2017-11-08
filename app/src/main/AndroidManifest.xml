@@ -46,7 +46,13 @@
             android:label="@string/title_activity_settings" />
         <activity
             android:name=".AchievementActivity"
-            android:label="@string/action_achievement">
+            android:label="@string/achievement" />
+        <activity
+            android:name=".CollectedWords"
+            android:label="@string/collected_words"/>
+        <activity
+            android:name=".GuessedSongs"
+            android:label="@string/guessed_songs">
         </activity>
     </application>
 

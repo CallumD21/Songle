@@ -10,7 +10,7 @@
     <item
         android:id="@+id/action_achievement"
         android:orderInCategory="1"
-        android:title="@string/action_achievement"
+        android:title="@string/achievement"
         android:icon="@drawable/achievement"
         app:showAsAction="ifRoom" />
 </menu>

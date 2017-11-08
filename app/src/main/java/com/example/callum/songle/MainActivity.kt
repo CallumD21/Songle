@@ -107,7 +107,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        // Handle navigation view item clicks here.
+        // Close the bar unless they choose walk
+        if (item.itemId != R.id.nav_walk){
+            drawer_layout.closeDrawer(GravityCompat.START)
+        }
         when (item.itemId) {
             R.id.nav_guess -> {
                 //If the user presses guess open a dialog designed in guess_dialog.xml
@@ -115,14 +118,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 dialog.setView(View.inflate(this,R.layout.guess_dialog,null))
                 dialog.show()
             }
-            R.id.nav_walk -> {
-                Log.d("MYAPP","Pressed walk")
-            }
             R.id.nav_words -> {
-                Log.d("MYAPP","Pressed words")
+                //Open the Achievement Activity
+                val intent = Intent(this,CollectedWords::class.java)
+                startActivity(intent)
             }
             R.id.nav_songs -> {
-                Log.d("MYAPP","Pressed songs")
+                //Open the Achievement Activity
+                val intent = Intent(this,GuessedSongs::class.java)
+                startActivity(intent)
             }
             R.id.nav_giveup -> {
                 //If the user presses give up open an anko dialog
@@ -136,8 +140,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }.show()
             }
         }
-
-        drawer_layout.closeDrawer(GravityCompat.START)
         return true
     }
 

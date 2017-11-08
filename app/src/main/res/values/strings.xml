@@ -6,7 +6,7 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
-    <string name="action_achievement">Achievements</string>
+    <string name="achievement">Achievements</string>
     <string name="title_activity_settings">Settings</string>
 
     <!-- Strings related to Settings -->
@@ -100,4 +100,6 @@
     <string name="song">Song title</string>
     <string name="artist">Artists name</string>
     <string name="submit">Submit</string>
+    <string name="collected_words">Collected Words</string>
+    <string name="guessed_songs">Guessed Songs</string>
 </resources>

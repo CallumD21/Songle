@@ -5,11 +5,11 @@ import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MenuItem
 
-class AchievementActivity : AppCompatActivity() {
+class CollectedWords : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_achievement)
+        setContentView(R.layout.activity_collected_words)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
     }
 
