@@ -97,4 +97,7 @@
     <string name="nav_words">Collected words</string>
     <string name="nav_songs">Guessed songs</string>
     <string name="nav_giveup">Give up</string>
+    <string name="song">Song title</string>
+    <string name="artist">Artists name</string>
+    <string name="submit">Submit</string>
 </resources>

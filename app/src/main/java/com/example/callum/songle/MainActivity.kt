@@ -28,6 +28,9 @@ import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
+import kotlinx.android.synthetic.main.guess_dialog.*
+import org.jetbrains.anko.alert
+import org.jetbrains.anko.toast
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
@@ -107,7 +110,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Handle navigation view item clicks here.
         when (item.itemId) {
             R.id.nav_guess -> {
-                Log.d("MYAPP","Pressed guess")
+                //If the user presses guess open a dialog designed in guess_dialog.xml
+                val dialog = AlertDialog.Builder(this).create()
+                dialog.setView(View.inflate(this,R.layout.guess_dialog,null))
+                dialog.show()
             }
             R.id.nav_walk -> {
                 Log.d("MYAPP","Pressed walk")
@@ -119,8 +125,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 Log.d("MYAPP","Pressed songs")
             }
             R.id.nav_giveup -> {
-                //If the press give up open a dialog
-                Log.d("MYAPP","Pressed give up")
+                //If the user presses give up open an anko dialog
+                alert("Are you sure you want to give up on this song?", "Give up!") {
+                    positiveButton("Yes") {
+                        toast("You clicked on Yes Button")
+                    }
+                    negativeButton("No") {
+                        toast("You clicked on No Button")
+                    }
+                }.show()
             }
         }
 
