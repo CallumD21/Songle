@@ -90,12 +90,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         when (item.itemId) {
-            R.id.action_settings -> {
-                //Open the Settings Activity
-                val intent = Intent(this,SettingsActivity::class.java)
-                startActivity(intent)
-                return true
-            }
             R.id.action_achievement -> {
                 //Open the Achievement Activity
                 val intent = Intent(this,AchievementActivity::class.java)
