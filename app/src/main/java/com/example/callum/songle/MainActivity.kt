@@ -3,8 +3,11 @@ package com.example.callum.songle
 import android.Manifest
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.location.Location
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
@@ -23,13 +26,19 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CircleOptions
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import kotlinx.android.synthetic.main.guess_dialog.*
 import org.jetbrains.anko.alert
+import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
@@ -41,6 +50,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     var mLocationPermissionGranted = false
     private var mLastLocation: Location? = null
     val TAG = "MainActivity"
+    //A BroadcastReeceiver that monitors network connectivity changes
+    private var receiver = NetworkReceiver()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,9 +71,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 .build()
 
         fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_SHORT)
-                    .setAction("Action", null).show()
+            toast("You collected: Oh,")
+            fab.visibility = View.GONE
+            fab_text.visibility = View.GONE
         }
+
+        fun onDestroy() {
+            super.onDestroy()
+            // Unregisters BroadcastReceiver when app is destroyed.
+            if (receiver != null) {
+                this.unregisterReceiver(receiver);
+            }
+        }
+
 
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
@@ -69,6 +91,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         toggle.syncState()
 
         nav_view.setNavigationItemSelectedListener(this)
+
+        // Register BroadcastReceiver to track connection changes.
+        val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
+        this.registerReceiver(receiver, filter)
+
     }
 
     override fun onBackPressed() {
@@ -93,6 +120,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.action_achievement -> {
                 //Open the Achievement Activity
                 val intent = Intent(this,AchievementActivity::class.java)
+                startActivity(intent)
+                return true
+            }
+            R.id.action_help -> {
+                //Open the Help Activity
+                val intent = Intent(this,Help::class.java)
                 startActivity(intent)
                 return true
             }
@@ -132,6 +165,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         toast("You clicked on No Button")
                     }
                 }.show()
+            }
+            R.id.nav_diff -> {
+                val difficulties = listOf("Easy", "Medium", "Hard", "Really Hard", "Impossible")
+                selector("Please choose a difficulty:", difficulties, { dialogInterface, i ->
+                    toast("You are playing ${difficulties[i]} difficulty!")
+                })
             }
             R.id.nav_walk -> {
                 val dialog = AlertDialog.Builder(this).create()
@@ -188,6 +227,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else {
             //MAYBE CHANGE THIS
             Log.d("MYAPP","""[onLocationChanged] Lat/Long now (${current.getLatitude()},${current.getLongitude()})""")
+            val position = LatLng(current.latitude,current.longitude)
+            val circleOptions = CircleOptions();
+            val circle = mMap.addCircle(circleOptions
+                    .center(position)
+                    .radius(20.0)
+                    .strokeColor(Color.parseColor("#673AB7")))
+            circle.center = position
         }
         //DO SOMETHING
     }

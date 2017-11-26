@@ -17,6 +17,9 @@
         android:id="@+id/nav_giveup"
         android:title="@string/nav_giveup" />
     <item
+        android:id="@+id/nav_diff"
+        android:title="@string/difficulty" />
+    <item
         android:id="@+id/nav_walk"
         android:icon="@drawable/ic_directions_walk_black_24dp"
         android:title="0 steps" />

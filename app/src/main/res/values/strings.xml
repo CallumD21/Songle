@@ -105,4 +105,28 @@
     <string name="correct">Correct, Well Done!</string>
     <string name="next">Next</string>
     <string name="inccorrect">Unlucky, Try Again!</string>
+    <string name="difficulty">Change difficulty</string>
+    <string name="help">Help</string>
+    <string name="diff"><u><b>Difficulty</b></u></string>
+    <string name="diff_info">The difficulty is automatically set to medium but can be changed at any
+        time by the change difficulty option in the navigation bar. There are five difficulties:
+        Easy, Medium, Hard, Very Hard and Impossible! The difficulties are classified in the
+        following way:</string>
+    <string name="diff_list">Easy- Words are classified as either boring, not boring, interesting or very
+            interesting, and all of the words are displayed on the map. \nMedium (default)- Words are
+        classified as either boring, not boring or interesting, and all of the words are displayed
+        on the map.  \nHard- Words are classified as either boring, not boring or interesting, and
+        only 75% of the words are displayed on the map.\nVery Hard- Words are classified as either
+        boring or not boring, and only 50% of the words are displayed on the map.\nImpossible- No
+        additional information is given, words are unclassified, and only 25% of the words are
+        displayed on the map</string>
+    <string name="map"><u><b>Map Key</b></u></string>
+    <string name="unclassified">Unclassified</string>
+    <string name="boring">Boring</string>
+    <string name="notboring">Not Boring</string>
+    <string name="interesting">Interesting</string>
+    <string name="veryinteresting">Very Interesting</string>
+    <string name="msg"><b>It is recommended you read this before playing. To close this page press the home button in the top left hand corner.</b></string>
+    <string name="songle"><u><b>What is Songle</b></u></string>
+    <string name="songle_info">Songle is a location-based puzzle game in which you collect words that have been scattered around the University of Edinburgh’s Central Area. The words make up the lyrics of a well-known song and the aim of the game is to guess the song from the words which have been found. If you need any help when playing the game re open this page by pressing the help icon in the top right hand corner of the home screen and find the required information under one of the relevant header. Good luck and have fun!</string>
 </resources>
