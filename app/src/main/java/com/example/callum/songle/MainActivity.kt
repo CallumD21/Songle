@@ -46,6 +46,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     val TAG = "MainActivity"
     private lateinit var placemarkers: ArrayList<Placemark>
     private lateinit var markers: ArrayList<Marker>
+    private lateinit var lyrics: ArrayList<ArrayList<String>>
     //Loaded is true when the placemarkers and markers have been loaded
     private var loaded = false
     //A BroadcastReeceiver that monitors network connectivity changes
@@ -71,7 +72,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         collect.setOnClickListener { view ->
             val index=nearestMarker(mLastLocation)
             toast("You collected: "+placemarkers[index].name)
-            //Write the word to the collected words screen
+            //Split the name to get the indices
+            val indices = placemarkers[index].name.split(":")
+            //-1 because of zero indexing in the arraylist
+            Log.d("TXT",lyrics[indices[0].toInt()-1][indices[1].toInt()-1])
             //Remove the marker from the map
             markers[index].remove()
             //Remove the markers from the lists
@@ -84,15 +88,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
 
-        fun onDestroy() {
-            super.onDestroy()
-            // Unregisters BroadcastReceiver when app is destroyed.
-            if (receiver != null) {
-                this.unregisterReceiver(receiver)
-            }
-        }
-
-
         val toggle = ActionBarDrawerToggle(
                 this, drawer_layout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close)
         drawer_layout.addDrawerListener(toggle)
@@ -104,6 +99,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
         this.registerReceiver(receiver, filter)
 
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Unregisters BroadcastReceiver when app is destroyed.
+        if (receiver != null) {
+            this.unregisterReceiver(receiver)
+        }
     }
 
     override fun onBackPressed() {
@@ -128,13 +131,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.action_achievement -> {
                 //Open the Achievement Activity
                 val intent = Intent(this,AchievementActivity::class.java)
-                startActivity(intent)
+                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                startActivityIfNeeded(intent,0)
                 return true
             }
             R.id.action_help -> {
                 //Open the Help Activity
                 val intent = Intent(this,Help::class.java)
-                startActivity(intent)
+                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                startActivityIfNeeded(intent,0)
                 return true
             }
             else -> return super.onOptionsItemSelected(item)
@@ -154,14 +159,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 dialog.show()
             }
             R.id.nav_words -> {
-                //Open the Achievement Activity
+                //Open the CollectedWords Activity
                 val intent = Intent(this,CollectedWords::class.java)
-                startActivity(intent)
+                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                startActivityIfNeeded(intent,0)
             }
             R.id.nav_songs -> {
-                //Open the Achievement Activity
+                //Open the Songs Activity
                 val intent = Intent(this,GuessedSongs::class.java)
-                startActivity(intent)
+                intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+                startActivityIfNeeded(intent,0)
             }
             R.id.nav_giveup -> {
                 //If the user presses give up open an anko dialog
@@ -286,7 +293,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mMap.uiSettings.isMyLocationButtonEnabled = true
     }
 
-    override fun downloadComplete(result: ArrayList<Placemark>) {
+    override fun downloadXmlComplete(result: ArrayList<Placemark>) {
         placemarkers = result
         markers = ArrayList<Marker>()
         //If the icon is null an error occured
@@ -303,6 +310,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Placemarkers and markers have now been loaded
         loaded=true
+    }
+
+    override fun downloadTxtComplete(result: ArrayList<ArrayList<String>>) {
+        lyrics = result
     }
 
     //Return the index of the marker closest to the currentLocation

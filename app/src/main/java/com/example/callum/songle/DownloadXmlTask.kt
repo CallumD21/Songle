@@ -66,7 +66,7 @@ class DownloadXmlTask(private val caller: DownloadCompleteListener) : AsyncTask<
 
     override fun onPostExecute(result: ArrayList<Placemark>) {
         super.onPostExecute(result)
-        caller.downloadComplete(result)
+        caller.downloadXmlComplete(result)
     }
 
 }

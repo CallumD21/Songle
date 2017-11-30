@@ -9,17 +9,20 @@ import android.webkit.DownloadListener
 
 class NetworkReceiver(private val caller: DownloadCompleteListener) : BroadcastReceiver(){
     override fun onReceive(context: Context, intent: Intent) {
-        val URL = "http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/01/map1.kml"
+        val Lyrics = "http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/01/lyrics.txt"
+        val Map = "http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/01/map1.kml"
         val connMgr = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val networkInfo = connMgr.activeNetworkInfo
         //Use wifi if it is available
         if(networkInfo?.type==ConnectivityManager.TYPE_WIFI){
-            DownloadXmlTask(caller).execute(URL)
+            DownloadTxtTask(caller).execute(Lyrics)
+            DownloadXmlTask(caller).execute(Map)
 
         }
         //Else use whatever connection is available
         else if(networkInfo !=null){
-            DownloadXmlTask(caller).execute(URL)
+            DownloadTxtTask(caller).execute(Lyrics)
+            DownloadXmlTask(caller).execute(Map)
         }
         else{
             //No connection

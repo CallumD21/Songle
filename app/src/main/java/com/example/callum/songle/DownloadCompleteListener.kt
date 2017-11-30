@@ -1,5 +1,6 @@
 package com.example.callum.songle
 
 interface DownloadCompleteListener {
-    fun downloadComplete(result: ArrayList<Placemark>)
+    fun downloadXmlComplete(result: ArrayList<Placemark>)
+    fun downloadTxtComplete(result: ArrayList<ArrayList<String>>)
 }

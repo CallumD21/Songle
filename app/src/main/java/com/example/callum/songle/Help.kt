@@ -4,6 +4,7 @@ import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.text.Html
+import android.util.Log
 import android.view.MenuItem
 import kotlinx.android.synthetic.main.activity_help.*
 
@@ -19,7 +20,8 @@ class Help : AppCompatActivity() {
         val id = item.itemId
         if (id == android.R.id.home) {
             val intent = Intent(this,MainActivity::class.java)
-            startActivity(intent)
+            intent.setFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+            startActivityIfNeeded(intent,0)
             return true
         }
         return super.onOptionsItemSelected(item)
