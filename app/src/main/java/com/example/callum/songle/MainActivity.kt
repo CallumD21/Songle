@@ -2,6 +2,7 @@ package com.example.callum.songle
 
 import android.Manifest
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -71,11 +72,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         collect.setOnClickListener { view ->
             val index=nearestMarker(mLastLocation)
-            toast("You collected: "+placemarkers[index].name)
             //Split the name to get the indices
             val indices = placemarkers[index].name.split(":")
             //-1 because of zero indexing in the arraylist
-            Log.d("TXT",lyrics[indices[0].toInt()-1][indices[1].toInt()-1])
+            val word=lyrics[indices[0].toInt()-1][indices[1].toInt()-1]
+            toast("You collected: "+word)
+
+            //Save the word to the file
+            val setting = getSharedPreferences("Words",Context.MODE_PRIVATE)
+            val editor = setting.edit()
+            editor.putString("word",word)
+            editor.apply()
+
             //Remove the marker from the map
             markers[index].remove()
             //Remove the markers from the lists

@@ -1,5 +1,6 @@
 package com.example.callum.songle
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
@@ -19,6 +20,19 @@ class CollectedWords : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_collected_words)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        val settings = getSharedPreferences("Words",Context.MODE_PRIVATE)
+        val text = settings.getString("word","")
+        val word = TextView(this)
+        word.setText("time")
+        word.textSize= 20f
+        word.setPadding(50,20,0,0)
+        word.setTextColor(Color.parseColor("#673AB7"))
+        words.addView(word,0)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
