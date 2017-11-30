@@ -6,13 +6,22 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.io.InputStream
+import android.graphics.BitmapFactory
+import android.graphics.Bitmap
+import android.graphics.Matrix
+import java.net.URL
+import android.opengl.ETC1.getHeight
+import android.opengl.ETC1.getWidth
+
+
+
 
 public class MapXmlParser {
     //We don't use namespaces
     private val ns: String? = null
 
     @Throws(XmlPullParserException::class, IOException::class)
-    fun parse(input : InputStream):List<Placemark>{
+    fun parse(input : InputStream):ArrayList<Placemark>{
         Log.d("MYAPP","IN PARSE!")
         input.use {
             val parser = Xml.newPullParser()
@@ -24,7 +33,7 @@ public class MapXmlParser {
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
-    private fun readKml(parser: XmlPullParser): List<Placemark>{
+    private fun readKml(parser: XmlPullParser): ArrayList<Placemark>{
         Log.d("MYAPP","IN READKML!")
         parser.require(XmlPullParser.START_TAG,ns,"kml")
         parser.nextTag()
@@ -35,11 +44,11 @@ public class MapXmlParser {
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
-    private fun readDocument(parser: XmlPullParser): List<Placemark>{
+    private fun readDocument(parser: XmlPullParser): ArrayList<Placemark>{
         Log.d("MYAPP","IN READDOCUMENTS!")
         val placemarkers = ArrayList<Placemark>()
         //The key is the style id and the pair is they scale and icon
-        val styles = HashMap<String,Pair<Double,String>>()
+        val styles = HashMap<String,Bitmap>()
         parser.require(XmlPullParser.START_TAG,ns,"Document")
         while(parser.next()!=XmlPullParser.END_TAG){
             if(parser.eventType!=XmlPullParser.START_TAG){
@@ -48,15 +57,26 @@ public class MapXmlParser {
             //Starts by looking for the Style tag
             if(parser.name == "Style"){
                 val triple = readStyle(parser)
-                styles.put(triple.first, Pair(triple.second,triple.third))
+                val url = URL(triple.third)
+                val bitmap = BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                val width = bitmap.width
+                val height = bitmap.height
+                //Creat a matrix for the resize of the bitmap
+                val matrix = Matrix()
+                //Initialize the matrix
+                matrix.postScale(triple.second.toFloat(), triple.second.toFloat())
+
+                //Resize the bitmap
+                val resizedBitmap = Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, false)
+                bitmap.recycle()
+                styles.put(triple.first, resizedBitmap)
             }
             //Then look for placemarkers
             else if (parser.name == "Placemark"){
                 val triple = readPlacemark(parser)
                 //The second element in the triple is the description this should match one of the
                 //keys in the hashmap to give the placemarkers icon and scale
-                val pair = styles.get(triple.second)
-                val placemarker = Placemark(triple.first, pair!!.first,pair!!.second,triple.third)
+                val placemarker = Placemark(triple.first, styles.get(triple.second),triple.third)
                 placemarkers.add(placemarker)
             }
             else{

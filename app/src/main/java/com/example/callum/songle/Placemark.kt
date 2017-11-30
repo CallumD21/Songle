@@ -1,3 +1,8 @@
 package com.example.callum.songle
 
-data class Placemark(val name: String, val scale: Double, val icon: String, val point: Pair<Double,Double>)
+import android.graphics.Bitmap
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.android.gms.maps.model.MarkerOptions
+
+data class Placemark(val name: String, val icon: Bitmap?, val point: Pair<Double,Double>)

@@ -12,29 +12,33 @@ import java.net.URL
 
 
 
-class DownloadXmlTask() : AsyncTask<String,Void,String>(){
-    override fun doInBackground(vararg urls: String): String {
+class DownloadXmlTask(private val caller: DownloadCompleteListener) : AsyncTask<String,Void,ArrayList<Placemark>>(){
+    override fun doInBackground(vararg urls: String): ArrayList<Placemark> {
+        var error = ArrayList<Placemark>()
+        var point = Pair(0.0,0.0)
         return try{
             loadXmlFromNetwork(urls[0])
         }catch (e:IOException){
             //Unable to load content
-            "Unable to load content"
+            val placemarker = Placemark("Check your network connection",null,point)
+            error.add(placemarker)
+            error
         }catch (e:XmlPullParserException){
-            "Error parsing XML"
+            val placemarker = Placemark("Error parsing XML",null,point)
+            error.add(placemarker)
+            error
         }
     }
 
-    private fun loadXmlFromNetwork(urlString : String): String{
-        val result = StringBuilder()
+    private fun loadXmlFromNetwork(urlString : String): ArrayList<Placemark>{
         var stream: InputStream? = null
         // Instantiate the parser
         val parser = MapXmlParser()
-        var placmarkers: List<Placemark>? = null
+        val placmarkers: ArrayList<Placemark>
 
         try {
             stream = downloadUrl(urlString)
             placmarkers = parser.parse(stream)
-            Log.d("MYAPP",placmarkers.size.toString())
             // Makes sure that the InputStream is closed after the app is
             // finished using it.
         } finally {
@@ -42,7 +46,7 @@ class DownloadXmlTask() : AsyncTask<String,Void,String>(){
                 stream.close()
             }
         }
-        return result.toString()
+        return placmarkers
     }
 
 
@@ -60,8 +64,9 @@ class DownloadXmlTask() : AsyncTask<String,Void,String>(){
         return  conn.inputStream
     }
 
-    override fun onPostExecute(result: String) {
+    override fun onPostExecute(result: ArrayList<Placemark>) {
         super.onPostExecute(result)
+        caller.downloadComplete(result)
     }
 
 }

@@ -1,7 +1,7 @@
 package com.example.callum.songle
 
 import android.Manifest
-import android.content.DialogInterface
+import android.app.Activity
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -9,7 +9,6 @@ import android.graphics.Color
 import android.location.Location
 import android.net.ConnectivityManager
 import android.os.Bundle
-import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
@@ -26,32 +25,31 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
-import com.google.android.gms.maps.model.CircleOptions
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
-import kotlinx.android.synthetic.main.guess_dialog.*
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener, DownloadCompleteListener {
     private lateinit var mMap: GoogleMap
     private lateinit var mGoogleApiClient: GoogleApiClient
     val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
     var mLocationPermissionGranted = false
     private var mLastLocation: Location? = null
     val TAG = "MainActivity"
+    private lateinit var placemarkers: ArrayList<Placemark>
+    private lateinit var markers: ArrayList<Marker>
+    //Loaded is true when the placemarkers and markers have been loaded
+    private var loaded = false
     //A BroadcastReeceiver that monitors network connectivity changes
-    private var receiver = NetworkReceiver()
+    private var receiver = NetworkReceiver(this)
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,17 +68,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 .addApi(LocationServices.API)
                 .build()
 
-        fab.setOnClickListener { view ->
-            toast("You collected: Oh,")
-            fab.visibility = View.GONE
-            fab_text.visibility = View.GONE
+        collect.setOnClickListener { view ->
+            val index=nearestMarker(mLastLocation)
+            toast("You collected: "+placemarkers[index].name)
+            //Write the word to the collected words screen
+            //Remove the marker from the map
+            markers[index].remove()
+            //Remove the markers from the lists
+            markers.removeAt(index)
+            placemarkers.removeAt(index)
+            //If no more markers in the circle then remove the button
+            if (!inCircle(mLastLocation)){
+                collect.visibility = View.GONE
+                collect_text.visibility = View.GONE
+            }
         }
 
         fun onDestroy() {
             super.onDestroy()
             // Unregisters BroadcastReceiver when app is destroyed.
             if (receiver != null) {
-                this.unregisterReceiver(receiver);
+                this.unregisterReceiver(receiver)
             }
         }
 
@@ -107,7 +115,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        // Inflate the menu; this adds items to the action bar if it is present.
+        // Inflate the menu this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.main, menu)
         return true
     }
@@ -208,7 +216,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onConnected(connectionHint : Bundle?) {
-        try { createLocationRequest(); }
+        try { createLocationRequest() }
         catch (ise : IllegalStateException){
             Log.d("MYAPP","IllegalStateException thrown [onConnected]")
         }
@@ -216,24 +224,33 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient)
         } else {
-            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION)
         }
     }
 
     override fun onLocationChanged(current : Location?) {
+        mLastLocation=current
         if(current == null){
             //DO SOMETHING ELSE
             Log.d("MYAPP","[onLocationChanged] Location is unknown")
         } else {
-            //MAYBE CHANGE THIS
-            Log.d("MYAPP","""[onLocationChanged] Lat/Long now (${current.getLatitude()},${current.getLongitude()})""")
             val position = LatLng(current.latitude,current.longitude)
-            val circleOptions = CircleOptions();
+            val circleOptions = CircleOptions()
             val circle = mMap.addCircle(circleOptions
                     .center(position)
                     .radius(20.0)
                     .strokeColor(Color.parseColor("#673AB7")))
             circle.center = position
+            //If a point is within the circle of radius 20 centered at the users location then
+            //display the collect button
+            if (inCircle(mLastLocation)){
+                collect.visibility = View.VISIBLE
+                collect_text.visibility = View.VISIBLE
+            }
+            else{
+                collect.visibility = View.GONE
+                collect_text.visibility = View.GONE
+            }
         }
         //DO SOMETHING
     }
@@ -267,5 +284,76 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Add ”My location” button to the user interface
         mMap.uiSettings.isMyLocationButtonEnabled = true
+    }
+
+    override fun downloadComplete(result: ArrayList<Placemark>) {
+        placemarkers = result
+        markers = ArrayList<Marker>()
+        //If the icon is null an error occured
+        if (placemarkers[0].icon == null) {
+            placemarkers[0].name
+        } else {
+            //Draw the map
+            for (placemark in placemarkers) {
+                var point = LatLng(placemark.point.second, placemark.point.first)
+                var marker = MarkerOptions().position(point)
+                marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
+                markers.add(mMap.addMarker(marker))
+            }
+        }
+        //Placemarkers and markers have now been loaded
+        loaded=true
+    }
+
+    //Return the index of the marker closest to the currentLocation
+    fun nearestMarker(currentLocation: Location?): Int{
+        var indexOfClosest = -1
+        //currentLocation cannot be null as if it is the collect button wont be displayed
+        if (currentLocation==null){
+            Log.d("MYAPP","Location can not be found")
+        }
+        else{
+            val location = Location("")
+            location.longitude=placemarkers[0].point.first
+            location.latitude=placemarkers[0].point.second
+            indexOfClosest = 0
+            var shortestDistance = currentLocation.distanceTo(location)
+            var distance: Float
+            for (i in markers.indices){
+                location.longitude=placemarkers[i].point.first
+                location.latitude=placemarkers[i].point.second
+                distance=currentLocation.distanceTo(location)
+                if(distance<shortestDistance){
+                    shortestDistance=distance
+                    indexOfClosest=i
+                }
+            }
+        }
+        return indexOfClosest
+    }
+
+    //Return true if a marker is within 20 meters of the user
+    fun inCircle(currentLocation: Location?) : Boolean{
+        var found = false
+        //If the currentLocation is null then report an error and return false so the button is not
+        //displayed
+        if (currentLocation==null){
+            Log.d("MYAPP","Location can not be found")
+        }
+        else if (loaded){
+            val location = Location("")
+            var i=0
+            var distance: Float
+            while (!found && i<placemarkers.size){
+                location.longitude=placemarkers[i].point.first
+                location.latitude=placemarkers[i].point.second
+                distance=currentLocation.distanceTo(location)
+                if (distance<=20){
+                    found=true
+                }
+                i++
+            }
+        }
+        return found
     }
 }
