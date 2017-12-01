@@ -53,6 +53,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     //A BroadcastReeceiver that monitors network connectivity changes
     private var receiver = NetworkReceiver(this)
 
+    companion object {
+        lateinit var wordsList : ArrayList<String>
+        var readWords = -1
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -70,20 +75,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 .addApi(LocationServices.API)
                 .build()
 
-        collect.setOnClickListener { view ->
+        collect.setOnClickListener {
             val index=nearestMarker(mLastLocation)
             //Split the name to get the indices
             val indices = placemarkers[index].name.split(":")
             //-1 because of zero indexing in the arraylist
             val word=lyrics[indices[0].toInt()-1][indices[1].toInt()-1]
             toast("You collected: "+word)
-
-            //Save the word to the file
-            val setting = getSharedPreferences("Words",Context.MODE_PRIVATE)
-            val editor = setting.edit()
-            editor.putString("word",word)
-            editor.apply()
-
+            wordsList.add(word)
             //Remove the marker from the map
             markers[index].remove()
             //Remove the markers from the lists
@@ -106,7 +105,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Register BroadcastReceiver to track connection changes.
         val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
         this.registerReceiver(receiver, filter)
-
+        //Restore preferences
+        val preferences=getSharedPreferences("FILE",Context.MODE_PRIVATE)
+        //Use true as the default value as if it doesnt exist it means it is the apps first run
+        val firstRun=preferences.getBoolean("firstRun",true)
+        //If it is the first run of the app open the help activity
+        if(firstRun){
+            val intent = Intent(this,Help::class.java)
+            startActivity(intent)
+            //Set firstRun to false so it doesnt do this again
+            val editor=preferences.edit()
+            editor.putBoolean("firstRun",false)
+            editor.apply()
+        }
     }
 
     override fun onDestroy() {
