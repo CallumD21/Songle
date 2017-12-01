@@ -26,15 +26,19 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
+import java.lang.reflect.Type
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
@@ -45,16 +49,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     var mLocationPermissionGranted = false
     private var mLastLocation: Location? = null
     val TAG = "MainActivity"
-    private lateinit var placemarkers: ArrayList<Placemark>
-    private lateinit var markers: ArrayList<Marker>
+    private var placemarkers = ArrayList<Placemark>()
+    private var markers = ArrayList<Marker>()
     private lateinit var lyrics: ArrayList<ArrayList<String>>
     //Loaded is true when the placemarkers and markers have been loaded
     private var loaded = false
+    //True if the map need drawing when the map is ready
+    private var draw = false
     //A BroadcastReeceiver that monitors network connectivity changes
-    private var receiver = NetworkReceiver(this)
+    private lateinit var receiver : NetworkReceiver
 
     companion object {
-        lateinit var wordsList : ArrayList<String>
+        var wordsList = ArrayList<String>()
         var readWords = -1
     }
 
@@ -63,6 +69,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager
                 .findFragmentById(R.id.map) as SupportMapFragment
@@ -102,30 +109,39 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         nav_view.setNavigationItemSelectedListener(this)
 
-        // Register BroadcastReceiver to track connection changes.
-        val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
-        this.registerReceiver(receiver, filter)
         //Restore preferences
-        val preferences=getSharedPreferences("FILE",Context.MODE_PRIVATE)
+        val preferences=getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        //Use true as the default value as if it doesnt exist it means it is the apps first run so a
+        //map needs downloading
+        val downloadMap=preferences.getBoolean("downloadMap",true)
+        //If it is the first run of the app open the help activity
+        if(downloadMap){
+            //Set downloadMap to false so it doesnt download the map again
+            val editor=preferences.edit()
+            editor.putBoolean("downloadMap",false)
+            editor.apply()
+            receiver = NetworkReceiver(this)
+            val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
+            this.registerReceiver(receiver, filter)
+        }
+
         //Use true as the default value as if it doesnt exist it means it is the apps first run
         val firstRun=preferences.getBoolean("firstRun",true)
         //If it is the first run of the app open the help activity
         if(firstRun){
-            val intent = Intent(this,Help::class.java)
-            startActivity(intent)
             //Set firstRun to false so it doesnt do this again
             val editor=preferences.edit()
             editor.putBoolean("firstRun",false)
             editor.apply()
+            val intent = Intent(this,Help::class.java)
+            startActivity(intent)
         }
-    }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        // Unregisters BroadcastReceiver when app is destroyed.
-        if (receiver != null) {
-            this.unregisterReceiver(receiver)
-        }
+
+
+
+        //Load all the saved data
+        load()
     }
 
     override fun onBackPressed() {
@@ -222,6 +238,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onStop() {
         super.onStop()
+        //Save the data
+        save()
         if(mGoogleApiClient.isConnected){
             mGoogleApiClient.disconnect()
         }
@@ -300,6 +318,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
      * installed Google Play services and returned to the app.
      */
     override fun onMapReady(googleMap: GoogleMap) {
+        Log.d("MYAPP","mAPrEADY")
         mMap = googleMap
 
         try {
@@ -310,22 +329,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Add ”My location” button to the user interface
         mMap.uiSettings.isMyLocationButtonEnabled = true
+
+        if (draw){
+                drawMap()
+        }
     }
 
     override fun downloadXmlComplete(result: ArrayList<Placemark>) {
         placemarkers = result
-        markers = ArrayList<Marker>()
         //If the icon is null an error occured
         if (placemarkers[0].icon == null) {
             placemarkers[0].name
         } else {
-            //Draw the map
-            for (placemark in placemarkers) {
-                var point = LatLng(placemark.point.second, placemark.point.first)
-                var marker = MarkerOptions().position(point)
-                marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
-                markers.add(mMap.addMarker(marker))
-            }
+            drawMap()
         }
         //Placemarkers and markers have now been loaded
         loaded=true
@@ -385,5 +401,46 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
         }
         return found
+    }
+
+    fun drawMap(){
+        //Draw the map
+        for (placemark in placemarkers) {
+            var point = LatLng(placemark.point.second, placemark.point.first)
+            var marker = MarkerOptions().position(point)
+            marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
+            markers.add(mMap.addMarker(marker))
+        }
+    }
+
+    fun load(){
+        //Load the saved words from the previous plays
+        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        val gson = Gson()
+        var json = preferences.getString("CollectedWords","ERROR")
+        if (json!="ERROR"){
+            wordsList = gson.fromJson(json, ArrayList<String>().javaClass)
+        }
+        //Load the placemarkers
+        json = preferences.getString("Placemarkers","ERROR")
+        if (json!="ERROR"){
+            val type = object : TypeToken<List<Placemark>>() {}.type
+            placemarkers = gson.fromJson<ArrayList<Placemark>>(json, type)
+            //The map need drawing
+            Log.d("Loaded",placemarkers.size.toString())
+            draw = true
+        }
+    }
+
+    fun save(){
+        //Save the collected words
+        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        val editor = preferences.edit()
+        val gson = Gson()
+        var json = gson.toJson(wordsList)
+        editor.putString("CollectedWords", json)
+        json = gson.toJson(placemarkers)
+        editor.putString("Placemarkers",json)
+        editor.apply()
     }
 }

@@ -18,18 +18,6 @@ class CollectedWords : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_collected_words)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        //Load the saved words from the previous plays
-        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
-        val gson = Gson()
-        val json = preferences.getString("CollectedWords","ERROR")
-        //json is "ERROR" if no words have yet been saved so initialize wordsList to the empty Array
-        if (json=="ERROR"){
-            Log.d("MYAPP","ERROR")
-            MainActivity.wordsList = ArrayList()
-        }
-        else{
-            MainActivity.wordsList = gson.fromJson(json, ArrayList<String>().javaClass)
-        }
     }
 
     override fun onStart() {
@@ -47,17 +35,6 @@ class CollectedWords : AppCompatActivity() {
                 MainActivity.readWords++
             }
         }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        //Save the collected words
-        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
-        val editor = preferences.edit()
-        val gson = Gson()
-        val json = gson.toJson(MainActivity.wordsList)
-        editor.putString("CollectedWords", json)
-        editor.apply()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
