@@ -15,14 +15,12 @@ class NetworkReceiver(private val caller: DownloadCompleteListener) : BroadcastR
         val networkInfo = connMgr.activeNetworkInfo
         //Use wifi if it is available
         if(networkInfo?.type==ConnectivityManager.TYPE_WIFI){
-            DownloadTxtTask(caller).execute(Lyrics)
-            DownloadXmlTask(caller).execute(Map)
+            Download(caller).execute(Map,Lyrics)
 
         }
         //Else use whatever connection is available
         else if(networkInfo !=null){
-            DownloadTxtTask(caller).execute(Lyrics)
-            DownloadXmlTask(caller).execute(Map)
+            Download(caller).execute(Map,Lyrics)
         }
         else{
             //No connection

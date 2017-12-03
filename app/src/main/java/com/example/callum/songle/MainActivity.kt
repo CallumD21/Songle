@@ -6,7 +6,10 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Matrix
 import android.location.Location
 import android.net.ConnectivityManager
 import android.os.Bundle
@@ -39,6 +42,7 @@ import org.jetbrains.anko.alert
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
 import java.lang.reflect.Type
+import java.net.URL
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
@@ -51,7 +55,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     val TAG = "MainActivity"
     private var placemarkers = ArrayList<Placemark>()
     private var markers = ArrayList<Marker>()
-    private lateinit var lyrics: ArrayList<ArrayList<String>>
     //Loaded is true when the placemarkers and markers have been loaded
     private var loaded = false
     //True if the map need drawing when the map is ready
@@ -84,10 +87,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         collect.setOnClickListener {
             val index=nearestMarker(mLastLocation)
-            //Split the name to get the indices
-            val indices = placemarkers[index].name.split(":")
-            //-1 because of zero indexing in the arraylist
-            val word=lyrics[indices[0].toInt()-1][indices[1].toInt()-1]
+            val word=placemarkers[index].name
             toast("You collected: "+word)
             wordsList.add(word)
             //Remove the marker from the map
@@ -335,7 +335,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    override fun downloadXmlComplete(result: ArrayList<Placemark>) {
+    override fun downloadComplete(result: ArrayList<Placemark>) {
         placemarkers = result
         //If the icon is null an error occured
         if (placemarkers[0].icon == null) {
@@ -345,10 +345,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Placemarkers and markers have now been loaded
         loaded=true
-    }
-
-    override fun downloadTxtComplete(result: ArrayList<ArrayList<String>>) {
-        lyrics = result
     }
 
     //Return the index of the marker closest to the currentLocation
@@ -408,7 +404,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         for (placemark in placemarkers) {
             var point = LatLng(placemark.point.second, placemark.point.first)
             var marker = MarkerOptions().position(point)
-            marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
+            //marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
             markers.add(mMap.addMarker(marker))
         }
     }
@@ -424,12 +420,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Load the placemarkers
         json = preferences.getString("Placemarkers","ERROR")
         if (json!="ERROR"){
-            val type = object : TypeToken<List<Placemark>>() {}.type
+            val type = object : TypeToken<ArrayList<Placemark>>() {}.type
             placemarkers = gson.fromJson<ArrayList<Placemark>>(json, type)
             //The map need drawing
-            Log.d("Loaded",placemarkers.size.toString())
             draw = true
         }
+        loaded=true
     }
 
     fun save(){

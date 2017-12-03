@@ -174,9 +174,9 @@ public class MapXmlParser {
                 continue
             }
             when(parser.name){
-                    "name" -> name = readName(parser)
-                    "description" -> description = readDescription(parser)
-                    "Point" -> point = readPoint(parser)
+                "name" -> name = readName(parser)
+                "description" -> description = readDescription(parser)
+                "Point" -> point = readPoint(parser)
                 else -> skip(parser)
             }
         }
