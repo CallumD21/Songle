@@ -41,6 +41,10 @@ import kotlinx.android.synthetic.main.app_bar_main.*
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.IOException
 import java.lang.reflect.Type
 import java.net.URL
 
@@ -318,7 +322,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
      * installed Google Play services and returned to the app.
      */
     override fun onMapReady(googleMap: GoogleMap) {
-        Log.d("MYAPP","mAPrEADY")
         mMap = googleMap
 
         try {
@@ -404,7 +407,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         for (placemark in placemarkers) {
             var point = LatLng(placemark.point.second, placemark.point.first)
             var marker = MarkerOptions().position(point)
-            //marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
+            marker.icon(BitmapDescriptorFactory.fromBitmap(placemark.icon))
             markers.add(mMap.addMarker(marker))
         }
     }
@@ -420,9 +423,35 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Load the placemarkers
         json = preferences.getString("Placemarkers","ERROR")
         if (json!="ERROR"){
-            val type = object : TypeToken<ArrayList<Placemark>>() {}.type
-            placemarkers = gson.fromJson<ArrayList<Placemark>>(json, type)
-            //The map need drawing
+            val type = object : TypeToken<ArrayList<Triple<String,Pair<Double,Double>,String>>>() {}.type
+            var triples = gson.fromJson<ArrayList<Triple<String,Pair<Double,Double>,String>>>(json, type)
+            var placemark : Placemark
+            //Convert the triples back to placemarkers and load the bitmaps
+            var bitmaps = HashMap<String,Bitmap>()
+            for (triple in triples){
+                if (!bitmaps.containsKey(triple.third)){
+                    //Load the bitmap from the file
+                    var fis: FileInputStream? = null
+                    try {
+                        fis = this.openFileInput(triple.third)
+                        bitmaps.put(triple.third,BitmapFactory.decodeStream(fis))
+                    } catch (e: FileNotFoundException) {
+                        Log.d("MYAPP", "file not found")
+                        e.printStackTrace()
+                    } catch (e: IOException) {
+                        Log.d("MYAPP", "io exception")
+                        e.printStackTrace()
+                    } finally {
+                        if (fis!=null){
+                            fis.close()
+                        }
+                    }
+                }
+                var icon = bitmaps.get(triple.third)
+                placemark = Placemark(triple.first,icon,triple.second)
+                placemarkers.add(placemark)
+            }
+            //The map needs drawing
             draw = true
         }
         loaded=true
@@ -435,8 +464,43 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val gson = Gson()
         var json = gson.toJson(wordsList)
         editor.putString("CollectedWords", json)
-        json = gson.toJson(placemarkers)
+        var bitmaps = HashMap<Bitmap,String>()
+        var fileName = 0;
+        var icon : Bitmap?
+        var triples = ArrayList<Triple<String,Pair<Double,Double>,String>>()
+        //Extract the bitmaps and convert placemarkers to a triple
+        for (placemark in placemarkers){
+            icon=placemark.icon
+            if (!bitmaps.containsKey(icon) && icon!=null){
+                bitmaps.put(icon,fileName.toString())
+                fileName++
+            }
+            var file = bitmaps.get(placemark.icon)
+            //File is never null
+            if (file!=null){
+                triples.add(Triple(placemark.name,placemark.point,file))
+            }
+        }
+        //Bitmaps cannot be saved in shared preferences so save the bitmaps in a file and the
+        //words,points and filename of the corresponding bitmap in shared preferences
+        json = gson.toJson(triples)
         editor.putString("Placemarkers",json)
         editor.apply()
+        //Save the bitmaps
+        for (bitmap in bitmaps.keys){
+            var fos : FileOutputStream? = null
+            try {
+                fos = this.openFileOutput(bitmaps.get(bitmap), Context.MODE_PRIVATE)
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+            } catch (e: FileNotFoundException) {
+                Log.d("MYAPP", "file not found")
+            } catch (e: IOException) {
+                Log.d("MYAPP", "io exception")
+            } finally {
+                if (fos!=null){
+                    fos.close()
+                }
+            }
+        }
     }
 }
