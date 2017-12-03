@@ -1,7 +1,6 @@
 package com.example.callum.songle
 
 import android.Manifest
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -9,7 +8,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import android.graphics.Matrix
 import android.location.Location
 import android.net.ConnectivityManager
 import android.os.Bundle
@@ -45,8 +43,6 @@ import java.io.FileInputStream
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.reflect.Type
-import java.net.URL
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
@@ -65,6 +61,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var draw = false
     //A BroadcastReeceiver that monitors network connectivity changes
     private lateinit var receiver : NetworkReceiver
+    //The number of the active map 1..5. Defaults to 0 but it is always changed in onCreate
+    private var activeMap = 0
 
     companion object {
         var wordsList = ArrayList<String>()
@@ -141,8 +139,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             startActivity(intent)
         }
 
-
-
+        //Use 3 as the default value as the difficulty defaults to medium(3)
+        activeMap=preferences.getInt("activeMap",3)
 
         //Load all the saved data
         load()
@@ -338,13 +336,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    override fun downloadComplete(result: ArrayList<Placemark>) {
-        placemarkers = result
+    override fun downloadComplete(result: ArrayList<ArrayList<Placemark>>) {
+        placemarkers = result[activeMap-1]
         //If the icon is null an error occured
-        if (placemarkers[0].icon == null) {
-            placemarkers[0].name
+        if (result[0][0].icon == null) {
+            result[0][0].name
         } else {
             drawMap()
+            //Save all the maps
+            //The save and load functions only save and load the active map
+            saveAllMaps(result)
         }
         //Placemarkers and markers have now been loaded
         loaded=true
@@ -420,8 +421,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (json!="ERROR"){
             wordsList = gson.fromJson(json, ArrayList<String>().javaClass)
         }
+        loadMap(activeMap)
+    }
+
+    fun loadMap(map : Int){
         //Load the placemarkers
-        json = preferences.getString("Placemarkers","ERROR")
+        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        val gson = Gson()
+        var json = preferences.getString("Map"+map.toString(),"ERROR")
         if (json!="ERROR"){
             val type = object : TypeToken<ArrayList<Triple<String,Pair<Double,Double>,String>>>() {}.type
             var triples = gson.fromJson<ArrayList<Triple<String,Pair<Double,Double>,String>>>(json, type)
@@ -451,10 +458,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 placemark = Placemark(triple.first,icon,triple.second)
                 placemarkers.add(placemark)
             }
-            //The map needs drawing
+            //The map needs drawing and has been loaded
             draw = true
+            loaded=true
         }
-        loaded=true
     }
 
     fun save(){
@@ -464,7 +471,31 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val gson = Gson()
         var json = gson.toJson(wordsList)
         editor.putString("CollectedWords", json)
+        editor.apply()
         var bitmaps = HashMap<Bitmap,String>()
+        bitmaps = saveMap(activeMap,bitmaps)
+        //Save the bitmaps
+        for (bitmap in bitmaps.keys){
+            var fos : FileOutputStream? = null
+            try {
+                fos = this.openFileOutput(bitmaps.get(bitmap), Context.MODE_PRIVATE)
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+            } catch (e: FileNotFoundException) {
+                Log.d("MYAPP", "file not found")
+            } catch (e: IOException) {
+                Log.d("MYAPP", "io exception")
+            } finally {
+                if (fos!=null){
+                    fos.close()
+                }
+            }
+        }
+    }
+
+    fun saveMap(map : Int, bitmaps : HashMap<Bitmap,String>): HashMap<Bitmap,String>{
+        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        val editor = preferences.edit()
+        val gson = Gson()
         var fileName = 0;
         var icon : Bitmap?
         var triples = ArrayList<Triple<String,Pair<Double,Double>,String>>()
@@ -483,9 +514,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Bitmaps cannot be saved in shared preferences so save the bitmaps in a file and the
         //words,points and filename of the corresponding bitmap in shared preferences
-        json = gson.toJson(triples)
-        editor.putString("Placemarkers",json)
+        var json = gson.toJson(triples)
+        editor.putString("Map"+map.toString(),json)
         editor.apply()
+        return bitmaps
+    }
+
+    fun saveAllMaps(Maps: ArrayList<ArrayList<Placemark>>){
+        var bitmaps = HashMap<Bitmap,String>()
+        var i = 1
+        //Save the maps
+        for (map in Maps){
+            bitmaps=saveMap(i,bitmaps)
+            i++
+        }
         //Save the bitmaps
         for (bitmap in bitmaps.keys){
             var fos : FileOutputStream? = null

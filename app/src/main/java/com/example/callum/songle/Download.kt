@@ -10,32 +10,43 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.*
+import kotlin.collections.ArrayList
 
 
-class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,Void,ArrayList<Placemark>>(){
-    override fun doInBackground(vararg urls: String): ArrayList<Placemark> {
-        var error = ArrayList<Placemark>()
+class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,Void,ArrayList<ArrayList<Placemark>>>(){
+    override fun doInBackground(vararg urls: String): ArrayList<ArrayList<Placemark>> {
+        var error = ArrayList<ArrayList<Placemark>>()
         var point = Pair(0.0,0.0)
         return try{
             //Load the placemarkers and lyrics
-            var placemarkers = loadXmlFromNetwork(urls[0])
-            var lyrics = loadTxtFromNetwork(urls[1])
-            //Replace the name in the placemarker with the correct word
-            for (placemark in placemarkers){
-                //Split the name to get the indices
-                val indices = placemark.name.split(":")
-                //-1 because of zero indexing in the arraylist
-                placemark.name=lyrics[indices[0].toInt()-1][indices[1].toInt()-1]
+            var lyrics = loadTxtFromNetwork(urls[5])
+            var i = 0
+            var maps = ArrayList<ArrayList<Placemark>>()
+            while (i<5){
+                var placemarkers = loadXmlFromNetwork(urls[i])
+                //Replace the name in the placemarker with the correct word
+                for (placemark in placemarkers){
+                    //Split the name to get the indices
+                    val indices = placemark.name.split(":")
+                    //-1 because of zero indexing in the arraylist
+                    placemark.name=lyrics[indices[0].toInt()-1][indices[1].toInt()-1]
+                }
+                maps.add(placemarkers)
+                i++
             }
-            placemarkers
+            maps
         }catch (e:IOException){
             //Unable to load content
             val placemarker = Placemark("Check your network connection",null,point)
-            error.add(placemarker)
+            val placemarkers = ArrayList<Placemark>()
+            placemarkers.add(placemarker)
+            error.add(placemarkers)
             error
         }catch (e:XmlPullParserException){
             val placemarker = Placemark("Error parsing XML",null,point)
-            error.add(placemarker)
+            val placemarkers = ArrayList<Placemark>()
+            placemarkers.add(placemarker)
+            error.add(placemarkers)
             error
         }
     }
@@ -102,7 +113,7 @@ class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,
         return  conn.inputStream
     }
 
-    override fun onPostExecute(result: ArrayList<Placemark>) {
+    override fun onPostExecute(result: ArrayList<ArrayList<Placemark>>) {
         super.onPostExecute(result)
         caller.downloadComplete(result)
     }
