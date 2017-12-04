@@ -16,12 +16,12 @@ import android.opengl.ETC1.getWidth
 
 
 
-public class MapXmlParser {
+class MapXmlParser {
     //We don't use namespaces
     private val ns: String? = null
 
     @Throws(XmlPullParserException::class, IOException::class)
-    fun parse(input : InputStream):ArrayList<Placemark>{
+    fun parse(input : InputStream):ArrayList<Pair<Placemark,Bitmap?>>{
         Log.d("MYAPP","IN PARSE!")
         input.use {
             val parser = Xml.newPullParser()
@@ -33,7 +33,7 @@ public class MapXmlParser {
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
-    private fun readKml(parser: XmlPullParser): ArrayList<Placemark>{
+    private fun readKml(parser: XmlPullParser): ArrayList<Pair<Placemark,Bitmap?>>{
         Log.d("MYAPP","IN READKML!")
         parser.require(XmlPullParser.START_TAG,ns,"kml")
         parser.nextTag()
@@ -44,9 +44,9 @@ public class MapXmlParser {
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
-    private fun readDocument(parser: XmlPullParser): ArrayList<Placemark>{
+    private fun readDocument(parser: XmlPullParser): ArrayList<Pair<Placemark,Bitmap?>>{
         Log.d("MYAPP","IN READDOCUMENTS!")
-        val placemarkers = ArrayList<Placemark>()
+        val placemarkers = ArrayList<Pair<Placemark,Bitmap?>>()
         //The key is the style id and the pair is they scale and icon
         val styles = HashMap<String,Bitmap>()
         parser.require(XmlPullParser.START_TAG,ns,"Document")
@@ -76,8 +76,10 @@ public class MapXmlParser {
                 val triple = readPlacemark(parser)
                 //The second element in the triple is the description this should match one of the
                 //keys in the hashmap to give the placemarkers icon and scale
-                val placemarker = Placemark(triple.first, styles.get(triple.second),triple.third)
-                placemarkers.add(placemarker)
+                //FileName defualts to empty string
+                val placemarker = Placemark("",triple.first, triple.third,"")
+                val pair = Pair(placemarker,styles.get(triple.second))
+                placemarkers.add(pair)
             }
             else{
                 skip(parser)
