@@ -1,5 +1,6 @@
 package com.example.callum.songle
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.os.AsyncTask
 import android.util.Log
@@ -14,17 +15,19 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,Void,ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>>(){
-    override fun doInBackground(vararg urls: String): ArrayList<ArrayList<Pair<Placemark,Bitmap?>>> {
-        var error = ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>()
-        var point = Pair(0.0,0.0)
+class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,Void,Container>(){
+    override fun doInBackground(vararg urls: String): Container {
+        //if an error return an empty container
+        var container = Container(ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>(),ArrayList<Song>(),"")
         return try{
+            //Load the songs
+            var cont = loadSongsFromNetwork(urls[0],urls[7])
             //Load the placemarkers and lyrics
-            var lyrics = loadTxtFromNetwork(urls[5])
-            var i = 0
+            var lyrics = loadTxtFromNetwork(urls[6])
+            var i = 1
             var maps = ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>()
-            while (i<5){
-                var placemarkers = loadXmlFromNetwork(urls[i])
+            while (i<6){
+                var placemarkers = loadMapFromNetwork(urls[i])
                 //Replace the name in the placemarker with the correct word
                 for (pair in placemarkers){
                     var placemark = pair.first
@@ -36,24 +39,16 @@ class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,
                 maps.add(placemarkers)
                 i++
             }
-            maps
+            var container = Container(maps,cont.songs,cont.timeStamp)
+            container
         }catch (e:IOException){
-            //Unable to load content
-            val placemarker = Placemark("Check your network connection","",point,"")
-            val placemarkers = ArrayList<Pair<Placemark,Bitmap?>>()
-            placemarkers.add(Pair(placemarker,null))
-            error.add(placemarkers)
-            error
+            container
         }catch (e:XmlPullParserException){
-            val placemarker = Placemark("Error parsing XML","",point,"")
-            val placemarkers = ArrayList<Pair<Placemark,Bitmap?>>()
-            placemarkers.add(Pair(placemarker,null))
-            error.add(placemarkers)
-            error
+            container
         }
     }
 
-    private fun loadXmlFromNetwork(urlString : String): ArrayList<Pair<Placemark,Bitmap?>>{
+    private fun loadMapFromNetwork(urlString : String): ArrayList<Pair<Placemark,Bitmap?>>{
         var stream: InputStream? = null
         // Instantiate the parser
         val parser = MapXmlParser()
@@ -88,6 +83,25 @@ class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,
         return lyrics
     }
 
+    private fun loadSongsFromNetwork(urlString : String, timeStamp: String): Container{
+        var stream: InputStream? = null
+        // Instantiate the parser
+        val parser = SongXmlParser()
+        val songs: Container
+
+        try {
+            stream = downloadUrl(urlString)
+            songs = parser.parse(stream,timeStamp)
+            // Makes sure that the InputStream is closed after the app is
+            // finished using it.
+        } finally {
+            if (stream != null) {
+                stream.close()
+            }
+        }
+        return songs
+    }
+
     fun readTxt(input: InputStream): ArrayList<ArrayList<String>>{
         val scanner = Scanner(input)
         var lyrics = ArrayList<ArrayList<String>>()
@@ -115,7 +129,7 @@ class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,
         return  conn.inputStream
     }
 
-    override fun onPostExecute(result: ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>) {
+    override fun onPostExecute(result: Container) {
         super.onPostExecute(result)
         caller.downloadComplete(result)
     }

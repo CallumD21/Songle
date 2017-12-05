@@ -122,12 +122,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         //Restore preferences
         val preferences=getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        val editor=preferences.edit()
         //Use true as the default value as if it doesnt exist it means it is the apps first run so a
         //map needs downloading
         val downloadMap=preferences.getBoolean("downloadMap",true)
-        //If it is the first run of the app open the help activity
+        //If downloadMap then set up the receiver and download
         if(downloadMap){
-            receiver = NetworkReceiver(this)
+            //Network receiver needs the saved timestamp of Songs
+            val timeStamp = preferences.getString("timeStamp","")
+            receiver = NetworkReceiver(this,timeStamp)
             val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
             this.registerReceiver(receiver, filter)
         }
@@ -137,7 +140,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //If it is the first run of the app open the help activity
         if(firstRun){
             //Set firstRun to false so it doesnt do this again
-            val editor=preferences.edit()
             editor.putBoolean("firstRun",false)
             editor.apply()
             val intent = Intent(this,Help::class.java)
@@ -375,12 +377,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    override fun downloadComplete(result: ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>) {
-        placemarkers = result[activeMap-1]
-        //If the icon is null an error occured
-        if (result[0][0].second == null) {
-            result[0][0].first.word
+    override fun downloadComplete(container: Container) {
+        //If maps and song are empty an error occured
+        if (container.maps.size==0 && container.songs.size==0) {
+            Log.d("MYAPP","An error occurred while downloading!")
         } else {
+            //If the songs list has changed save the new timeStamp and songs list
+            if (container.songs.size!=0){
+                val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+                val editor=preferences.edit()
+                editor.putString("timeStamp",container.timeStamp)
+                val gson = Gson()
+                var json = gson.toJson(container.songs)
+                editor.putString("Songs", json)
+                editor.apply()
+                Log.d("SAVED",container.timeStamp+container.songs.size.toString())
+            }
+            placemarkers = container.maps[activeMap-1]
             if (mapReady){
                 drawMap()
             }
@@ -390,7 +403,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             //Save all the maps
             //The save and load functions only save and load the active map
-            saveAllMaps(result)
+            saveAllMaps(container.maps)
             //Set downloadMap to false so it doesnt download the map again
             val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
             val editor=preferences.edit()
@@ -545,7 +558,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         json = gson.toJson(collectedPos)
         editor.putString("CollectedPos", json)
         editor.apply()
-        var bitmaps = HashMap<Bitmap,String>()
         //Save the current map to the activeMap folder
         saveMap(activeMap)
     }

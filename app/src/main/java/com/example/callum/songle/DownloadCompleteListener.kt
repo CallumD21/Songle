@@ -1,7 +1,7 @@
 package com.example.callum.songle
 
-import android.graphics.Bitmap
+import android.content.Context
 
 interface DownloadCompleteListener {
-    fun downloadComplete(result: ArrayList<ArrayList<Pair<Placemark, Bitmap?>>>)
+    fun downloadComplete(result: Container)
 }
