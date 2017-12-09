@@ -15,15 +15,23 @@ import java.util.*
 import kotlin.collections.ArrayList
 
 
-class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,Void,Container>(){
-    override fun doInBackground(vararg urls: String): Container {
+class Download(private val caller: DownloadCompleteListener, private val songList: ArrayList<Song>) : AsyncTask<String,Void,Container>(){
+    override fun doInBackground(vararg args: String): Container {
         //if an error return an empty container
         var container = Container(ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>(),ArrayList<Song>(),"")
         return try{
             //Load the songs
-            var cont = loadSongsFromNetwork(urls[0],urls[7])
+            var cont = loadSongsFromNetwork(args[0],args[1])
+            //If loadSongsFromNetwork doesnt load any songs then the song list is the one passed in
+            var urls : ArrayList<String>
+            if (cont.songs.size==0){
+                urls = pickASong(songList,MainActivity.quessedSongs)
+            }
+            else{
+                urls = pickASong(cont.songs,MainActivity.quessedSongs)
+            }
             //Load the placemarkers and lyrics
-            var lyrics = loadTxtFromNetwork(urls[6])
+            var lyrics = loadTxtFromNetwork(urls[0])
             var i = 1
             var maps = ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>()
             while (i<6){
@@ -133,5 +141,52 @@ class Download(private val caller: DownloadCompleteListener) : AsyncTask<String,
         super.onPostExecute(result)
         caller.downloadComplete(result)
     }
+
+    //Randomly pick a non guessed song and return the urls for the lyrics and maps for this song
+    //If all songs have been guessed just randomly pick a song from the song list
+    fun pickASong(songList : ArrayList<Song>, guessedSongs: ArrayList<Song>) : ArrayList<String>{
+        //The number of the new song
+        val newSong : String
+        if (songList.size==guessedSongs.size){
+            val index = Random().nextInt(songList.size)
+            newSong = songList[index].number
+        }
+        else{
+            //Create a list of non guessed songs
+            var notGuessed = ArrayList<Song>()
+            for (song in songList){
+                if (!contains(guessedSongs,song)){
+                    notGuessed.add(song)
+                }
+            }
+            //Randomly pick a song
+            val index = Random().nextInt(notGuessed.size)
+            newSong = notGuessed[index].number
+        }
+        Log.d("LOADED",newSong)
+        var urls = ArrayList<String>()
+        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/lyrics.txt")
+        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map1.kml")
+        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map2.kml")
+        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map3.kml")
+        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map4.kml")
+        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map5.kml")
+        return urls
+    }
+
+    //See if the song is in the list if it is then return true
+    fun contains(list: ArrayList<Song>, song: Song): Boolean{
+        var found = false
+        for (item in list){
+            //Two songs are the same if their numbers are the same
+            if (song.number==item.number){
+                found=true
+                //Can now exit the loop
+                break
+            }
+        }
+        return found
+    }
+
 
 }

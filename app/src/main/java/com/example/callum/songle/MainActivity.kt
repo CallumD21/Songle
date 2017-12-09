@@ -2,6 +2,7 @@ package com.example.callum.songle
 
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -22,12 +23,12 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -36,6 +37,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
+import kotlinx.android.synthetic.main.guess_dialog.*
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
@@ -75,6 +77,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     companion object {
         var wordsList = ArrayList<String>()
         var readWords = -1
+        var quessedSongs = ArrayList<Song>()
     }
 
 
@@ -130,7 +133,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if(downloadMap){
             //Network receiver needs the saved timestamp of Songs
             val timeStamp = preferences.getString("timeStamp","")
-            receiver = NetworkReceiver(this,timeStamp)
+            val gson = Gson()
+            var json = preferences.getString("Songs","ERROR")
+            var songList = ArrayList<Song>()
+            if (json!="ERROR"){
+                val type = object : TypeToken<ArrayList<Song>>() {}.type
+                songList = gson.fromJson<ArrayList<Song>>(json, type)
+            }
+            receiver = NetworkReceiver(this,timeStamp,songList)
             val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
             this.registerReceiver(receiver, filter)
         }
@@ -199,8 +209,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         when (item.itemId) {
             R.id.nav_guess -> {
                 //If the user presses guess open a dialog designed in guess_dialog.xml
-                val dialog = AlertDialog.Builder(this).create()
-                dialog.setView(View.inflate(this,R.layout.guess_dialog,null))
+                val builder = AlertDialog.Builder(this)
+                builder.setView(View.inflate(this,R.layout.guess_dialog,null))
+                //Create the button
+                builder.setPositiveButton("submit", DialogInterface.OnClickListener { _, _ ->
+                    Log.d("MYAPP","ButtonPressed")
+                })
+                val dialog = builder.create()
+                dialog.setOnShowListener {
+                    //Set the colours of the button
+                    val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+                    button.setBackgroundColor(ContextCompat.getColor(this, R.color.accent))
+                    button.setTextColor(Color.WHITE)
+                }
                 dialog.show()
             }
             R.id.nav_words -> {

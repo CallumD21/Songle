@@ -2,6 +2,7 @@ package com.example.callum.songle
 
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
@@ -33,6 +34,10 @@ class GuessedSongs : AppCompatActivity() {
         link.textSize= 16f
         link.setPadding(50,10,0,100)
         songs.addView(link)
+        link.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW,Uri.parse(link.text.toString()))
+            startActivity(intent)
+            }
         val song2 = TextView(this)
         song2.setText("Mr. Brightside")
         song2.textSize= 20f
@@ -50,6 +55,10 @@ class GuessedSongs : AppCompatActivity() {
         link2.textSize= 16f
         link2.setPadding(50,10,0,100)
         songs.addView(link2)
+        link2.setOnClickListener {
+            val intent = Intent(Intent.ACTION_VIEW,Uri.parse(link2.text.toString()))
+            startActivity(intent)
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
