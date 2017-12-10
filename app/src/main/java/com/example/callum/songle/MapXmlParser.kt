@@ -22,7 +22,7 @@ class MapXmlParser {
 
     @Throws(XmlPullParserException::class, IOException::class)
     fun parse(input : InputStream):ArrayList<Pair<Placemark,Bitmap?>>{
-        Log.d("MYAPP","IN PARSE!")
+        Log.i("MYAPP","IN PARSE!")
         input.use {
             val parser = Xml.newPullParser()
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,false)
@@ -34,18 +34,18 @@ class MapXmlParser {
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readKml(parser: XmlPullParser): ArrayList<Pair<Placemark,Bitmap?>>{
-        Log.d("MYAPP","IN READKML!")
+        Log.i("MYAPP","IN READKML!")
         parser.require(XmlPullParser.START_TAG,ns,"kml")
         parser.nextTag()
         val placemarkers = readDocument(parser)
         parser.require(XmlPullParser.END_TAG,ns,"kml")
-        Log.d("MYAPP","LEAVING READKML!")
+        Log.i("MYAPP","LEAVING READKML!")
         return placemarkers
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readDocument(parser: XmlPullParser): ArrayList<Pair<Placemark,Bitmap?>>{
-        Log.d("MYAPP","IN READDOCUMENTS!")
+        Log.i("MYAPP","IN READDOCUMENTS!")
         val placemarkers = ArrayList<Pair<Placemark,Bitmap?>>()
         //The key is the style id and the pair is they scale and icon
         val styles = HashMap<String,Bitmap>()
@@ -85,14 +85,14 @@ class MapXmlParser {
                 skip(parser)
             }
         }
-        Log.d("MYAPP","LEAVING READDOCUMENTS!")
+        Log.i("MYAPP","LEAVING READDOCUMENTS!")
         parser.nextTag()
         return placemarkers
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readStyle(parser: XmlPullParser): Triple<String,Double,String>{
-        Log.d("MYAPP","IN READSTYLE!")
+        Log.i("MYAPP","IN READSTYLE!")
         var id = ""
         parser.require(XmlPullParser.START_TAG,ns,"Style")
         if(parser.name == "Style"){
@@ -101,13 +101,13 @@ class MapXmlParser {
         }
         val pair = readIconStyle(parser)
         parser.require(XmlPullParser.END_TAG,ns,"Style")
-        Log.d("MYAPP","LEAVING READSTYLE!")
+        Log.i("MYAPP","LEAVING READSTYLE!")
         return Triple(id,pair.first,pair.second)
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readIconStyle(parser: XmlPullParser): Pair<Double,String>{
-        Log.d("MYAPP","IN READICONSTYLE!")
+        Log.i("MYAPP","IN READICONSTYLE!")
         parser.require(XmlPullParser.START_TAG,ns,"IconStyle")
         parser.nextTag()
         var scale =readScale(parser)
@@ -115,58 +115,58 @@ class MapXmlParser {
         var icon =readIcon(parser)
         parser.require(XmlPullParser.END_TAG,ns,"IconStyle")
         parser.nextTag()
-        Log.d("MYAPP","LEAVING READICONSTYLE!")
+        Log.i("MYAPP","LEAVING READICONSTYLE!")
         return Pair(scale,icon)
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readScale(parser: XmlPullParser): Double{
-        Log.d("MYAPP","IN READSCALE!")
+        Log.i("MYAPP","IN READSCALE!")
         parser.require(XmlPullParser.START_TAG, ns, "scale")
         val scale = readText(parser)
         parser.require(XmlPullParser.END_TAG, ns, "scale")
-        Log.d("MYAPP","LEAVING READSCALE!")
+        Log.i("MYAPP","LEAVING READSCALE!")
         return scale.toDouble()
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
     private fun readText(parser: XmlPullParser): String {
-        Log.d("MYAPP","IN READTEXT!")
+        Log.i("MYAPP","IN READTEXT!")
         var result = ""
         if (parser.next() == XmlPullParser.TEXT) {
             result = parser.text
             parser.nextTag()
         }
-        Log.d("MYAPP","LEAVING READTEXT!")
+        Log.i("MYAPP","LEAVING READTEXT!")
         return result
     }
 
     @Throws(IOException::class, XmlPullParserException::class)
     private fun readIcon(parser: XmlPullParser): String {
-        Log.d("MYAPP","IN READICON!")
+        Log.i("MYAPP","IN READICON!")
         parser.require(XmlPullParser.START_TAG, ns, "Icon")
         parser.nextTag()
         val icon = readHref(parser)
         parser.require(XmlPullParser.END_TAG, ns, "Icon")
         parser.nextTag()
-        Log.d("MYAPP","LEAVING READICON!")
+        Log.i("MYAPP","LEAVING READICON!")
         return icon
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readHref(parser: XmlPullParser): String{
-        Log.d("MYAPP","IN READHREF!")
+        Log.i("MYAPP","IN READHREF!")
         parser.require(XmlPullParser.START_TAG, ns, "href")
         val href = readText(parser)
         parser.require(XmlPullParser.END_TAG, ns, "href")
         parser.nextTag()
-        Log.d("MYAPP","LEAVING READHREF!")
+        Log.i("MYAPP","LEAVING READHREF!")
         return href
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
     private fun readPlacemark(parser: XmlPullParser): Triple<String,String,Pair<Double,Double>> {
-        Log.d("MYAPP","IN READPLACEMARK!")
+        Log.i("MYAPP","IN READPLACEMARK!")
         parser.require(XmlPullParser.START_TAG, ns, "Placemark")
         var name = ""
         var description = ""
@@ -182,44 +182,44 @@ class MapXmlParser {
                 else -> skip(parser)
             }
         }
-        Log.d("MYAPP","LEAVING READPLACEMARK!")
+        Log.i("MYAPP","LEAVING READPLACEMARK!")
         return Triple(name, description, point)
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readName(parser: XmlPullParser): String{
-        Log.d("MYAPP","IN READNAME!")
+        Log.i("MYAPP","IN READNAME!")
         parser.require(XmlPullParser.START_TAG, ns, "name")
         val name = readText(parser)
         parser.require(XmlPullParser.END_TAG, ns, "name")
-        Log.d("MYAPP","LEAVING READNAME!")
+        Log.i("MYAPP","LEAVING READNAME!")
         return name
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readDescription(parser: XmlPullParser): String{
-        Log.d("MYAPP","IN READDESCRIPTION!")
+        Log.i("MYAPP","IN READDESCRIPTION!")
         parser.require(XmlPullParser.START_TAG, ns, "description")
         val description = readText(parser)
         parser.require(XmlPullParser.END_TAG, ns, "description")
-        Log.d("MYAPP","LEAVING READDESCRIPTION!")
+        Log.i("MYAPP","LEAVING READDESCRIPTION!")
         return description
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readPoint(parser: XmlPullParser): Pair<Double,Double>{
-        Log.d("MYAPP","IN READPOINT!")
+        Log.i("MYAPP","IN READPOINT!")
         parser.require(XmlPullParser.START_TAG,ns,"Point")
         parser.nextTag()
         val point = readCoordinates(parser)
         parser.require(XmlPullParser.END_TAG,ns,"Point")
-        Log.d("MYAPP","LEAVING READPOINT!")
+        Log.i("MYAPP","LEAVING READPOINT!")
         return point
     }
 
     @Throws(XmlPullParserException::class,IOException::class)
     private fun readCoordinates(parser: XmlPullParser): Pair<Double,Double>{
-        Log.d("MYAPP","IN READCOORD!")
+        Log.i("MYAPP","IN READCOORD!")
         parser.require(XmlPullParser.START_TAG, ns, "coordinates")
         //Get the coordinates as a string
         val string = readText(parser)
@@ -228,13 +228,13 @@ class MapXmlParser {
         val coordinates = Pair(stringList[0].toDouble(),stringList[1].toDouble())
         parser.require(XmlPullParser.END_TAG, ns, "coordinates")
         parser.nextTag()
-        Log.d("MYAPP","LEAVING READCOORD!")
+        Log.i("MYAPP","LEAVING READCOORD!")
         return coordinates
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
     private fun skip(parser: XmlPullParser) {
-        Log.d("MYAPP","IN SKIP!")
+        Log.i("MYAPP","IN SKIP!")
         if (parser.eventType != XmlPullParser.START_TAG) {
             throw IllegalStateException()
         }
@@ -245,6 +245,6 @@ class MapXmlParser {
                 XmlPullParser.START_TAG -> depth++
             }
         }
-        Log.d("MYAPP","LEAVING SKIP!")
+        Log.i("MYAPP","LEAVING SKIP!")
     }
 }

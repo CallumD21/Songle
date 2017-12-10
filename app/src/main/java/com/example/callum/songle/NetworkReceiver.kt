@@ -23,7 +23,7 @@ class NetworkReceiver(private val caller: DownloadCompleteListener, val timestam
         }
         else{
             //No connection
-            Log.d("MYAPP","No network connection!")
+            Log.i("MYAPP","No network connection!")
         }
     }
 }

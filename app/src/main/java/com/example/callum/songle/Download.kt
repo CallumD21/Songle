@@ -1,11 +1,8 @@
 package com.example.callum.songle
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.os.AsyncTask
 import android.util.Log
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
 import java.io.InputStream
@@ -18,18 +15,25 @@ import kotlin.collections.ArrayList
 class Download(private val caller: DownloadCompleteListener, private val songList: ArrayList<Song>) : AsyncTask<String,Void,Container>(){
     override fun doInBackground(vararg args: String): Container {
         //if an error return an empty container
-        var container = Container(ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>(),ArrayList<Song>(),"")
+        var container = Container(ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>(),ArrayList<Song>(),"","")
         return try{
             //Load the songs
             var cont = loadSongsFromNetwork(args[0],args[1])
             //If loadSongsFromNetwork doesnt load any songs then the song list is the one passed in
-            var urls : ArrayList<String>
+            var newSong : String
             if (cont.songs.size==0){
-                urls = pickASong(songList,MainActivity.quessedSongs)
+                newSong = pickASong(songList,MainActivity.guessedSongs)
             }
             else{
-                urls = pickASong(cont.songs,MainActivity.quessedSongs)
+                newSong = pickASong(cont.songs,MainActivity.guessedSongs)
             }
+            var urls = ArrayList<String>()
+            urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/lyrics.txt")
+            urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map1.kml")
+            urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map2.kml")
+            urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map3.kml")
+            urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map4.kml")
+            urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map5.kml")
             //Load the placemarkers and lyrics
             var lyrics = loadTxtFromNetwork(urls[0])
             var i = 1
@@ -47,7 +51,7 @@ class Download(private val caller: DownloadCompleteListener, private val songLis
                 maps.add(placemarkers)
                 i++
             }
-            var container = Container(maps,cont.songs,cont.timeStamp)
+            var container = Container(maps,cont.songs,cont.timeStamp,newSong)
             container
         }catch (e:IOException){
             container
@@ -142,9 +146,9 @@ class Download(private val caller: DownloadCompleteListener, private val songLis
         caller.downloadComplete(result)
     }
 
-    //Randomly pick a non guessed song and return the urls for the lyrics and maps for this song
+    //Randomly pick a non guessed song and return the number of this song
     //If all songs have been guessed just randomly pick a song from the song list
-    fun pickASong(songList : ArrayList<Song>, guessedSongs: ArrayList<Song>) : ArrayList<String>{
+    fun pickASong(songList : ArrayList<Song>, guessedSongs: ArrayList<Song>) : String{
         //The number of the new song
         val newSong : String
         if (songList.size==guessedSongs.size){
@@ -163,15 +167,7 @@ class Download(private val caller: DownloadCompleteListener, private val songLis
             val index = Random().nextInt(notGuessed.size)
             newSong = notGuessed[index].number
         }
-        Log.d("LOADED",newSong)
-        var urls = ArrayList<String>()
-        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/lyrics.txt")
-        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map1.kml")
-        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map2.kml")
-        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map3.kml")
-        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map4.kml")
-        urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map5.kml")
-        return urls
+        return newSong
     }
 
     //See if the song is in the list if it is then return true

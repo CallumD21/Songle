@@ -2,7 +2,6 @@ package com.example.callum.songle
 
 import android.Manifest
 import android.content.Context
-import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -23,7 +22,7 @@ import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.widget.Button
+import android.widget.EditText
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
@@ -35,9 +34,13 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.android.synthetic.main.activity_collected_words.view.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
+import kotlinx.android.synthetic.main.correct.view.*
 import kotlinx.android.synthetic.main.guess_dialog.*
+import kotlinx.android.synthetic.main.guess_dialog.view.*
+import kotlinx.android.synthetic.main.incorrect.view.*
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
@@ -73,11 +76,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var circle : Circle
     //True if the first time the location has been changed
     private var locationChanged = true
+    //The current song being played
+    private lateinit var currentSong: Song
 
     companion object {
         var wordsList = ArrayList<String>()
         var readWords = -1
-        var quessedSongs = ArrayList<Song>()
+        var guessedSongs = ArrayList<Song>()
+        var readSongs = -1
     }
 
 
@@ -210,17 +216,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_guess -> {
                 //If the user presses guess open a dialog designed in guess_dialog.xml
                 val builder = AlertDialog.Builder(this)
-                builder.setView(View.inflate(this,R.layout.guess_dialog,null))
-                //Create the button
-                builder.setPositiveButton("submit", DialogInterface.OnClickListener { _, _ ->
-                    Log.d("MYAPP","ButtonPressed")
-                })
+                val layout = layoutInflater.inflate(R.layout.guess_dialog,null)
+                builder.setView(layout)
                 val dialog = builder.create()
-                dialog.setOnShowListener {
-                    //Set the colours of the button
-                    val button = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-                    button.setBackgroundColor(ContextCompat.getColor(this, R.color.accent))
-                    button.setTextColor(Color.WHITE)
+                //Get the button
+                val button = layout.submit
+                button.setOnClickListener {
+                    //Get the user inputted song title and artist name
+                    //Put them to lowercase and compare with the current song name and title to
+                    //lowercase
+                    val title = layout.findViewById<EditText>(R.id.songTitle).text.toString().toLowerCase()
+                    val artist = layout.findViewById<EditText>(R.id.artist).text.toString().toLowerCase()
+                    if (title==currentSong.title.toLowerCase() && artist==currentSong.artist.toLowerCase()){
+                        //Close this dialog
+                        dialog.dismiss()
+                        correct()
+                    }
+                    else{
+                        //Close this dialog
+                        dialog.dismiss()
+                        incorrect()
+                    }
                 }
                 dialog.show()
             }
@@ -264,7 +280,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         }
                         markers.clear()
                         placemarkers.clear()
-                        Log.d("MYAPP","pms:"+placemarkers.size.toString()+", m:"+markers.size.toString())
+                        Log.i("MYAPP","pms:"+placemarkers.size.toString()+", m:"+markers.size.toString())
                         //Load and draw the new map
                         loadMap(difficulty)
                         activeMap=difficulty
@@ -280,13 +296,53 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                 })
             }
-            R.id.nav_walk -> {
-                val dialog = AlertDialog.Builder(this).create()
-                dialog.setView(View.inflate(this,R.layout.incorrect,null))
-                dialog.show()
-            }
         }
         return true
+    }
+
+
+    //Open the correct dialog and download the next song
+    private fun correct(){
+        val builder = AlertDialog.Builder(this)
+        var layout = layoutInflater.inflate(R.layout.correct,null)
+        builder.setView(layout)
+        val dialog = builder.create()
+        //Get the button
+        val button = layout.correctButton
+        //When the button is pressed close the dialog
+        button.setOnClickListener { dialog.dismiss() }
+        dialog.show()
+        //If the song has not already been guessed then add it to guessed songs
+        var found = false
+        for (song in guessedSongs){
+            if (song.number==currentSong.number){
+                found=true
+                break
+            }
+        }
+        if (!found){
+            guessedSongs.add(currentSong)
+        }
+        //Reset the collected words for the song and the readWords
+        wordsList = ArrayList<String>()
+        readWords = -1
+        //Clear the collected words screen
+        layout = layoutInflater.inflate(R.layout.activity_collected_words,null)
+        layout.words.removeAllViews()
+        //Download the new song
+    }
+
+    //Open the incorrect dialog
+    private fun incorrect(){
+        val builder = AlertDialog.Builder(this)
+        val layout = layoutInflater.inflate(R.layout.incorrect,null)
+        builder.setView(layout)
+        val dialog = builder.create()
+        //Get the button
+        val button = layout.incorrectButton
+        //When the button is pressed close the dialog
+        button.setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
     override fun onStart() {
@@ -320,7 +376,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onConnected(connectionHint : Bundle?) {
         try { createLocationRequest() }
         catch (ise : IllegalStateException){
-            Log.d("MYAPP","IllegalStateException thrown [onConnected]")
+            Log.i("MYAPP","IllegalStateException thrown [onConnected]")
         }
         //See if we can access the users location
         if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
@@ -334,7 +390,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mLastLocation=current
         if(current == null){
             //DO SOMETHING ELSE
-            Log.d("MYAPP","[onLocationChanged] Location is unknown")
+            Log.i("MYAPP","[onLocationChanged] Location is unknown")
         } else {
             val position = LatLng(current.latitude,current.longitude)
             //If first time this function has been called initalize the circle
@@ -364,12 +420,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onConnectionSuspended(flag : Int) {
         //DO SOMETHING
-        Log.d("MYAPP","[onConnectionSuspended]")
+        Log.i("MYAPP","[onConnectionSuspended]")
     }
 
     override fun onConnectionFailed(result: ConnectionResult) {
         //DO SOMETHING
-        Log.d("MYAPP","[onConnectionFailed]")
+        Log.i("MYAPP","[onConnectionFailed]")
     }
 
     /**
@@ -388,7 +444,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             //Show current position
             mMap.isMyLocationEnabled = true
         } catch (se : SecurityException) {
-            Log.d("MYAPP","Security exception thrown [onMapReady]")
+            Log.i("MYAPP","Security exception thrown [onMapReady]")
         }
         //Add ”My location” button to the user interface
         mMap.uiSettings.isMyLocationButtonEnabled = true
@@ -398,10 +454,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        if (receiver!=null){
+            this.unregisterReceiver(receiver)
+        }
+    }
+
     override fun downloadComplete(container: Container) {
         //If maps and song are empty an error occured
         if (container.maps.size==0 && container.songs.size==0) {
-            Log.d("MYAPP","An error occurred while downloading!")
+            Log.i("MYAPP","An error occurred while downloading!")
         } else {
             //If the songs list has changed save the new timeStamp and songs list
             if (container.songs.size!=0){
@@ -412,7 +475,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 var json = gson.toJson(container.songs)
                 editor.putString("Songs", json)
                 editor.apply()
-                Log.d("SAVED",container.timeStamp+container.songs.size.toString())
+                Log.i("SAVED",container.timeStamp+container.songs.size.toString())
             }
             placemarkers = container.maps[activeMap-1]
             if (mapReady){
@@ -429,6 +492,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
             val editor=preferences.edit()
             editor.putBoolean("downloadMap",false)
+
+            //Initzlize the current song
+            for (song in container.songs){
+                if (song.number==container.songNumber){
+                    currentSong=song
+                    Log.i("MYAPP",currentSong.artist+" "+currentSong.title)
+                    break
+                }
+            }
+            //Save the current song
+            val gson = Gson()
+            var json = gson.toJson(currentSong)
+            editor.putString("CurrentSong", json)
             editor.apply()
         }
         //Placemarkers and markers have now been loaded
@@ -440,7 +516,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         var indexOfClosest = -1
         //currentLocation cannot be null as if it is the collect button wont be displayed
         if (currentLocation==null){
-            Log.d("MYAPP","Location can not be found")
+            Log.i("MYAPP","Location can not be found")
         }
         else{
             val location = Location("")
@@ -468,7 +544,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //If the currentLocation is null then report an error and return false so the button is not
         //displayed
         if (currentLocation==null){
-            Log.d("MYAPP","Location can not be found")
+            Log.i("MYAPP","Location can not be found")
         }
         else if (loaded){
             val location = Location("")
@@ -516,11 +592,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (json!="ERROR"){
             wordsList = gson.fromJson(json, ArrayList<String>().javaClass)
         }
+        //Load the guessed songs
+        json = preferences.getString("GuessedSongs","ERROR")
+        if (json!="ERROR"){
+            val type = object : TypeToken<ArrayList<Song>>() {}.type
+            guessedSongs = gson.fromJson<ArrayList<Song>>(json, type)
+        }
         //load the collected pos
         json = preferences.getString("CollectedPos","ERROR")
         if (json!="ERROR"){
             collectedPos = gson.fromJson(json, ArrayList<String>().javaClass)
         }
+        //load the current song
+        json = preferences.getString("CurrentSong","ERROR")
+        if (json!="ERROR"){
+            val type = object : TypeToken<Song>() {}.type
+            currentSong = gson.fromJson<Song>(json, type)
+        }
+        //Load the map
         loadMap(activeMap)
     }
 
@@ -543,10 +632,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         fis = this.openFileInput(placemark.fileName)
                         bitmaps.put(placemark.fileName,BitmapFactory.decodeStream(fis))
                     } catch (e: FileNotFoundException) {
-                        Log.d("MYAPP", "file not found")
+                        Log.i("MYAPP", "file not found")
                         e.printStackTrace()
                     } catch (e: IOException) {
-                        Log.d("MYAPP", "io exception")
+                        Log.i("MYAPP", "io exception")
                         e.printStackTrace()
                     } finally {
                         if (fis!=null){
@@ -575,6 +664,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val gson = Gson()
         var json = gson.toJson(wordsList)
         editor.putString("CollectedWords", json)
+        //Save the guessed words
+        json = gson.toJson(guessedSongs)
+        editor.putString("GuessedSongs", json)
         //Save the collectedPos
         json = gson.toJson(collectedPos)
         editor.putString("CollectedPos", json)
@@ -645,9 +737,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 fos = this.openFileOutput(bitmaps.get(bitmap), Context.MODE_PRIVATE)
                 bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
             } catch (e: FileNotFoundException) {
-                Log.d("MYAPP", "file not found")
+                Log.i("MYAPP", "file not found")
             } catch (e: IOException) {
-                Log.d("MYAPP", "io exception")
+                Log.i("MYAPP", "io exception")
             } finally {
                 if (fos!=null){
                     fos.close()

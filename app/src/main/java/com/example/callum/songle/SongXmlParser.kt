@@ -41,7 +41,7 @@ class SongXmlParser {
                 }
             }
         }
-        return Container(ArrayList<ArrayList<Pair<Placemark, Bitmap?>>>(),songs,newTimeStamp)
+        return Container(ArrayList<ArrayList<Pair<Placemark, Bitmap?>>>(),songs,newTimeStamp,"")
     }
 
     @Throws(XmlPullParserException::class, IOException::class)
