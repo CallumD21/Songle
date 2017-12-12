@@ -22,6 +22,11 @@ class CollectedWords : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        //If readWords is -2 clear the screen
+        if (MainActivity.readWords==-2){
+            words.removeAllViews()
+            MainActivity.readWords=-1
+        }
         val listOfWords = MainActivity.wordsList
         for (i in listOfWords.indices){
             if (i>MainActivity.readWords){

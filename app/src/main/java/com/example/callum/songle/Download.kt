@@ -15,19 +15,20 @@ import kotlin.collections.ArrayList
 class Download(private val caller: DownloadCompleteListener, private val songList: ArrayList<Song>) : AsyncTask<String,Void,Container>(){
     override fun doInBackground(vararg args: String): Container {
         //if an error return an empty container
-        var container = Container(ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>(),ArrayList<Song>(),"","")
+        val container = Container(ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>(),ArrayList<Song>(),"","")
         return try{
             //Load the songs
-            var cont = loadSongsFromNetwork(args[0],args[1])
-            //If loadSongsFromNetwork doesnt load any songs then the song list is the one passed in
-            var newSong : String
+            val cont = loadSongsFromNetwork(args[0],args[1])
+            //If loadSongsFromNetwork doesn't load any songs then the song list is the one passed in
+            val listOfSongs : ArrayList<Song>
             if (cont.songs.size==0){
-                newSong = pickASong(songList,MainActivity.guessedSongs)
+                listOfSongs=songList
             }
             else{
-                newSong = pickASong(cont.songs,MainActivity.guessedSongs)
+                listOfSongs=cont.songs
             }
-            var urls = ArrayList<String>()
+            val newSong = pickASong(listOfSongs,MainActivity.guessedSongs,args[2])
+            val urls = ArrayList<String>()
             urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/lyrics.txt")
             urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map1.kml")
             urls.add("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+newSong+"/map2.kml")
@@ -51,7 +52,7 @@ class Download(private val caller: DownloadCompleteListener, private val songLis
                 maps.add(placemarkers)
                 i++
             }
-            var container = Container(maps,cont.songs,cont.timeStamp,newSong)
+            var container = Container(maps,listOfSongs,cont.timeStamp,newSong)
             container
         }catch (e:IOException){
             container
@@ -146,11 +147,26 @@ class Download(private val caller: DownloadCompleteListener, private val songLis
         caller.downloadComplete(result)
     }
 
-    //Randomly pick a non guessed song and return the number of this song
-    //If all songs have been guessed just randomly pick a song from the song list
-    fun pickASong(songList : ArrayList<Song>, guessedSongs: ArrayList<Song>) : String{
+    //Randomly pick a non guessed song that does not have number numSong and return the number
+    //of this song. When the user gives up on a song or all songs have been guessed it should not
+    //pick the same song twice in a row. If all songs have been guessed just randomly pick a song
+    //from the song list
+    fun pickASong(songList : ArrayList<Song>, guessedSongs: ArrayList<Song>, numSong: String) : String{
         //The number of the new song
         val newSong : String
+        //Remove the song numSong from both lists
+        for (song in songList){
+            if (song.number==numSong){
+                songList.remove(song)
+                break
+            }
+        }
+        for (song in guessedSongs){
+            if (song.number==numSong){
+                songList.remove(song)
+                break
+            }
+        }
         if (songList.size==guessedSongs.size){
             val index = Random().nextInt(songList.size)
             newSong = songList[index].number

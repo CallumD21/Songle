@@ -28,6 +28,7 @@ import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationListener
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -69,7 +70,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     //True if the map is ready and can be drawn on
     private var mapReady = false
     //A BroadcastReeceiver that monitors network connectivity changes
-    private lateinit var receiver : NetworkReceiver
+    private var receiver : NetworkReceiver? = null
     //The number of the active map 1..5. Defaults to 0 but it is always changed in onCreate
     private var activeMap = 0
     //Circle of radius 20 centered on the user
@@ -78,6 +79,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var locationChanged = true
     //The current song being played
     private lateinit var currentSong: Song
+    //The total distance the user has walked while playing the game. Is used to calculate steps made
+    private var distanceWalked = 0.0f
 
     companion object {
         var wordsList = ArrayList<String>()
@@ -132,11 +135,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Restore preferences
         val preferences=getSharedPreferences("MainFile",Context.MODE_PRIVATE)
         val editor=preferences.edit()
-        //Use true as the default value as if it doesnt exist it means it is the apps first run so a
-        //map needs downloading
-        val downloadMap=preferences.getBoolean("downloadMap",true)
-        //If downloadMap then set up the receiver and download
-        if(downloadMap){
+
+        //Use true as the default value as if it doesnt exist it means it is the apps first run
+        val firstRun=preferences.getBoolean("firstRun",true)
+        //If it is the first run of the app open the help activity and download the new song
+        if(firstRun){
+            //Set firstRun to false so it doesnt do this again
+            editor.putBoolean("firstRun",false)
+            editor.apply()
             //Network receiver needs the saved timestamp of Songs
             val timeStamp = preferences.getString("timeStamp","")
             val gson = Gson()
@@ -146,25 +152,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val type = object : TypeToken<ArrayList<Song>>() {}.type
                 songList = gson.fromJson<ArrayList<Song>>(json, type)
             }
-            receiver = NetworkReceiver(this,timeStamp,songList)
+            //Download the map
+            //The number of the song just played is empty string as no song has yet been played
+            receiver = NetworkReceiver(this,timeStamp,songList,"")
             val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
             this.registerReceiver(receiver, filter)
-        }
-
-        //Use true as the default value as if it doesnt exist it means it is the apps first run
-        val firstRun=preferences.getBoolean("firstRun",true)
-        //If it is the first run of the app open the help activity
-        if(firstRun){
-            //Set firstRun to false so it doesnt do this again
-            editor.putBoolean("firstRun",false)
-            editor.apply()
+            //Open help
             val intent = Intent(this,Help::class.java)
             startActivity(intent)
         }
 
         //Use 3 as the default value as the difficulty defaults to medium(4)
         activeMap=preferences.getInt("activeMap",4)
-
 
         //Load all the saved data
         load()
@@ -256,10 +255,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 //If the user presses give up open an anko dialog
                 alert("Are you sure you want to give up on this song?", "Give up!") {
                     positiveButton("Yes") {
-                        toast("You clicked on Yes Button")
+                        changeSong()
                     }
                     negativeButton("No") {
-                        toast("You clicked on No Button")
                     }
                 }.show()
             }
@@ -323,13 +321,29 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (!found){
             guessedSongs.add(currentSong)
         }
-        //Reset the collected words for the song and the readWords
+        changeSong()
+
+    }
+
+    private fun changeSong(){
+        //Reset the collected words for the song
         wordsList = ArrayList<String>()
-        readWords = -1
-        //Clear the collected words screen
-        layout = layoutInflater.inflate(R.layout.activity_collected_words,null)
-        layout.words.removeAllViews()
+        //-2 tells collected words to clear the screen
+        readWords = -2
         //Download the new song
+        //Network receiver needs the saved timestamp of Songs
+        val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+        val timeStamp = preferences.getString("timeStamp","")
+        val gson = Gson()
+        var json = preferences.getString("Songs","ERROR")
+        var songList = ArrayList<Song>()
+        if (json!="ERROR"){
+            val type = object : TypeToken<ArrayList<Song>>() {}.type
+            songList = gson.fromJson<ArrayList<Song>>(json, type)
+        }
+        receiver = NetworkReceiver(this,timeStamp,songList,currentSong.number)
+        val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
+        this.registerReceiver(receiver, filter)
     }
 
     //Open the incorrect dialog
@@ -449,6 +463,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Add ”My location” button to the user interface
         mMap.uiSettings.isMyLocationButtonEnabled = true
 
+        //Zoom in on the play area
+        val zoomLevel = 15.5f;
+        //This is the centre of the play area
+        val pos = LatLng(55.944425,-3.188396)
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(pos, zoomLevel));
+
         if (draw){
                 drawMap()
         }
@@ -466,17 +486,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (container.maps.size==0 && container.songs.size==0) {
             Log.i("MYAPP","An error occurred while downloading!")
         } else {
-            //If the songs list has changed save the new timeStamp and songs list
-            if (container.songs.size!=0){
-                val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
-                val editor=preferences.edit()
-                editor.putString("timeStamp",container.timeStamp)
-                val gson = Gson()
-                var json = gson.toJson(container.songs)
-                editor.putString("Songs", json)
-                editor.apply()
-                Log.i("SAVED",container.timeStamp+container.songs.size.toString())
-            }
+            //Save the timeStamp and songs list
+            val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
+            val editor=preferences.edit()
+            editor.putString("timeStamp",container.timeStamp)
+            val gson = Gson()
+            var json = gson.toJson(container.songs)
+            editor.putString("Songs", json)
             placemarkers = container.maps[activeMap-1]
             if (mapReady){
                 drawMap()
@@ -486,24 +502,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 draw = true
             }
             //Save all the maps
-            //The save and load functions only save and load the active map
             saveAllMaps(container.maps)
-            //Set downloadMap to false so it doesnt download the map again
-            val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
-            val editor=preferences.edit()
-            editor.putBoolean("downloadMap",false)
 
-            //Initzlize the current song
+            //Initialize the current song
             for (song in container.songs){
                 if (song.number==container.songNumber){
                     currentSong=song
-                    Log.i("MYAPP",currentSong.artist+" "+currentSong.title)
+                    Log.i("MYAPP",currentSong.number+" "+currentSong.artist+" "+currentSong.title)
                     break
                 }
             }
             //Save the current song
-            val gson = Gson()
-            var json = gson.toJson(currentSong)
+            json = gson.toJson(currentSong)
             editor.putString("CurrentSong", json)
             editor.apply()
         }
@@ -567,6 +577,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     fun drawMap(){
+        //Clear the map
+        for (marker in markers){
+            if (marker!=null){
+                marker.remove()
+            }
+        }
+        //Reset the markers
+        markers = ArrayList<Marker?>()
         //Draw the map
         for (i in placemarkers.indices) {
             var placemark = placemarkers[i].first
@@ -592,6 +610,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (json!="ERROR"){
             wordsList = gson.fromJson(json, ArrayList<String>().javaClass)
         }
+        //Load the total distance walked default value 0
+        distanceWalked=preferences.getFloat("distanceWalked",0.0f)
         //Load the guessed songs
         json = preferences.getString("GuessedSongs","ERROR")
         if (json!="ERROR"){
@@ -670,6 +690,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Save the collectedPos
         json = gson.toJson(collectedPos)
         editor.putString("CollectedPos", json)
+        //Save the distance walked
+        editor.putFloat("distanceWalked",distanceWalked)
         editor.apply()
         //Save the current map to the activeMap folder
         saveMap(activeMap)
