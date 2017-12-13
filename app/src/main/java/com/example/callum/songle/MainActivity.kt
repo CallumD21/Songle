@@ -15,6 +15,7 @@ import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
+import android.support.v4.widget.DrawerLayout
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AlertDialog
 import android.support.v7.app.AppCompatActivity
@@ -42,7 +43,9 @@ import kotlinx.android.synthetic.main.correct.view.*
 import kotlinx.android.synthetic.main.guess_dialog.*
 import kotlinx.android.synthetic.main.guess_dialog.view.*
 import kotlinx.android.synthetic.main.incorrect.view.*
+import kotlinx.android.synthetic.main.activity_main.nav_view
 import org.jetbrains.anko.alert
+import org.jetbrains.anko.find
 import org.jetbrains.anko.selector
 import org.jetbrains.anko.toast
 import java.io.FileInputStream
@@ -52,7 +55,7 @@ import java.io.IOException
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, LocationListener, DownloadCompleteListener {
+        GoogleApiClient.OnConnectionFailedListener, LocationListener, DownloadCompleteListener{
     private lateinit var mMap: GoogleMap
     private lateinit var mGoogleApiClient: GoogleApiClient
     val PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1
@@ -81,12 +84,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var currentSong: Song
     //The total distance the user has walked while playing the game. Is used to calculate steps made
     private var distanceWalked = 0.0f
+    //The number of achievements
+    private val numAch = 8
 
     companion object {
+        //List of collected words for this song
         var wordsList = ArrayList<String>()
         var readWords = -1
+        //List of the guessed songs
         var guessedSongs = ArrayList<Song>()
         var readSongs = -1
+        //The progress made on each achievement
+        var achievements = ArrayList<Double>()
     }
 
 
@@ -401,11 +410,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onLocationChanged(current : Location?) {
-        mLastLocation=current
         if(current == null){
             //DO SOMETHING ELSE
             Log.i("MYAPP","[onLocationChanged] Location is unknown")
         } else {
+            //Update the distance walked
+            //If it is the first time this function is run then the users steps shouldnt change
+            if (mLastLocation!=null && !locationChanged){
+                distanceWalked = distanceWalked + current.distanceTo(mLastLocation)
+                //Round to the nearest integer
+                //0.762 is the average step length in meters
+                this.nav_view.menu.findItem(R.id.nav_walk).title = distanceWalked.div(0.762).toInt().toString()+" steps"
+            }
             val position = LatLng(current.latitude,current.longitude)
             //If first time this function has been called initalize the circle
             if (locationChanged){
@@ -418,6 +434,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             //Move the circle
             circle.center = position
+            mLastLocation=current
             //If a point is within the circle of radius 20 centered at the users location then
             //display the collect button
             if (inCircle(mLastLocation)){
@@ -610,8 +627,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (json!="ERROR"){
             wordsList = gson.fromJson(json, ArrayList<String>().javaClass)
         }
-        //Load the total distance walked default value 0
-        distanceWalked=preferences.getFloat("distanceWalked",0.0f)
+        //Load the distanceWalked
+        distanceWalked = preferences.getFloat("distanceWalked",0.0f)
+        //Round to the nearest integer
+        //0.762 is the average step length in meters
+        this.nav_view.menu.findItem(R.id.nav_walk).title = distanceWalked.div(0.762).toInt().toString()+" steps"
         //Load the guessed songs
         json = preferences.getString("GuessedSongs","ERROR")
         if (json!="ERROR"){
@@ -628,6 +648,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (json!="ERROR"){
             val type = object : TypeToken<Song>() {}.type
             currentSong = gson.fromJson<Song>(json, type)
+        }
+        //load the achievement progress
+        json = preferences.getString("AchievementProgress","INIT")
+        if (json=="INIT"){
+            //If progress has not yet been saved the set all progress to 0
+            var i = 0
+            while(i<numAch){
+                achievements.add(i,0.0)
+                i++
+            }
+        }
+        else{
+            achievements = gson.fromJson(json, ArrayList<Double>().javaClass)
         }
         //Load the map
         loadMap(activeMap)
@@ -692,6 +725,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         editor.putString("CollectedPos", json)
         //Save the distance walked
         editor.putFloat("distanceWalked",distanceWalked)
+        //Save the achievement progress
+        json = gson.toJson(achievements)
+        editor.putString("AchievementProgress", json)
         editor.apply()
         //Save the current map to the activeMap folder
         saveMap(activeMap)

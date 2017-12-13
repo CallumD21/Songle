@@ -5,7 +5,10 @@ import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
+import android.widget.ProgressBar
 import kotlinx.android.synthetic.main.activity_achievement.*
+import org.jetbrains.anko.find
+import java.util.ArrayList
 
 class AchievementActivity : AppCompatActivity() {
 
@@ -13,9 +16,19 @@ class AchievementActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_achievement)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        pb1.progress = 100
-        pb2.progress = 100
-        pb4.progress = 50
+    }
+
+    override fun onStart() {
+        super.onStart()
+        //Set the progress bars progress rounding the doubles
+        pb1.progress=MainActivity.achievements[0].toInt()
+        pb2.progress=MainActivity.achievements[1].toInt()
+        pb3.progress=MainActivity.achievements[2].toInt()
+        pb4.progress=MainActivity.achievements[3].toInt()
+        pb5.progress=MainActivity.achievements[4].toInt()
+        pb6.progress=MainActivity.achievements[5].toInt()
+        pb7.progress=MainActivity.achievements[6].toInt()
+        pb8.progress=MainActivity.achievements[7].toInt()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
