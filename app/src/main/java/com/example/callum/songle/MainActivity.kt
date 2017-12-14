@@ -157,9 +157,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val firstRun=preferences.getBoolean("firstRun",true)
         //If it is the first run of the app open the help activity and download the new song
         if(firstRun){
+            //Open help
+            val intent = Intent(this,Help::class.java)
+            startActivity(intent)
             //Set firstRun to false so it doesnt do this again
             editor.putBoolean("firstRun",false)
             editor.apply()
+        }
+        val downloadMap = preferences.getBoolean("downloadMap",true)
+        if (downloadMap){
             //Network receiver needs the saved timestamp of Songs
             val timeStamp = preferences.getString("timeStamp","")
             val gson = Gson()
@@ -169,14 +175,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val type = object : TypeToken<ArrayList<Song>>() {}.type
                 songList = gson.fromJson<ArrayList<Song>>(json, type)
             }
+            //load the current song
+            json = preferences.getString("CurrentSong","ERROR")
+            //If currentSong has not been saved then default number to the empty string
+            var numSong = ""
+            if (json!="ERROR"){
+                val type = object : TypeToken<Song>() {}.type
+                currentSong = gson.fromJson<Song>(json, type)
+                numSong = currentSong.number
+            }
             //Download the map
-            //The number of the song just played is empty string as no song has yet been played
-            receiver = NetworkReceiver(this,timeStamp,songList,"")
+            receiver = NetworkReceiver(this,timeStamp,songList,numSong)
             val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
             this.registerReceiver(receiver, filter)
-            //Open help
-            val intent = Intent(this,Help::class.java)
-            startActivity(intent)
         }
 
         //Use 3 as the default value as the difficulty defaults to medium(4)
@@ -285,9 +296,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     //Easiest difficulty ois in Map 5
                     val difficulty = 5-i
                     if (activeMap!=difficulty){
+                        //Remove the button
+                        collect.visibility = View.GONE
+                        collect_text.visibility = View.GONE
                         //Save the active map
                         saveMap(activeMap)
-                        //Reset the maps
+                        //Clear the map
                         for (marker in markers){
                             if (marker!=null){
                                 marker.remove()
@@ -295,7 +309,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         }
                         markers.clear()
                         placemarkers.clear()
-                        Log.i("MYAPP","pms:"+placemarkers.size.toString()+", m:"+markers.size.toString())
                         //Load and draw the new map
                         loadMap(difficulty)
                         activeMap=difficulty
@@ -338,13 +351,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (!found){
             guessedSongs.add(currentSong)
         }
-        changeSong()
-
         //The third achievement is to correctly guess a song
         if (achievements[2]!=100.0){
             achievements[2]=100.0
             toast(R.string.ach)
         }
+        //The seventh achievement is to correctly guess a song having only collected one word
+        if (achievements[6]!=100.0 && wordsList.size==1){
+            achievements[6]=100.0
+            toast(R.string.ach)
+        }
+
+        changeSong()
     }
 
     private fun changeSong(){
@@ -352,6 +370,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         wordsList = ArrayList<String>()
         //-2 tells collected words to clear the screen
         readWords = -2
+        //Clear the map
+        for (marker in markers){
+            if (marker!=null){
+                marker.remove()
+            }
+        }
+        //Reset the placemarkers and markers
+        markers = ArrayList<Marker?>()
+        //Clear the map files by saving empty maps
+        val maps = ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>()
+        val map = ArrayList<Pair<Placemark,Bitmap?>>()
+        //Add five empty maps
+        var i=0
+        while (i<5){
+            maps.add(map)
+            i++
+        }
+        saveAllMaps(maps)
+        //Hide the button
+        collect.visibility = View.GONE
+        collect_text.visibility = View.GONE
         //Download the new song
         //Network receiver needs the saved timestamp of Songs
         val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
@@ -363,6 +402,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             val type = object : TypeToken<ArrayList<Song>>() {}.type
             songList = gson.fromJson<ArrayList<Song>>(json, type)
         }
+        //Set download map to true so if there is an error changing map it will download the map the
+        //next time the app is opened
+        val editor=preferences.edit()
+        editor.putBoolean("downloadMap", true)
+        editor.apply()
         receiver = NetworkReceiver(this,timeStamp,songList,currentSong.number)
         val filter = IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION)
         this.registerReceiver(receiver, filter)
@@ -541,9 +585,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun downloadComplete(container: Container) {
-        //If maps and song are empty an error occured
-        if (container.maps.size==0 && container.songs.size==0) {
-            Log.i("MYAPP","An error occurred while downloading!")
+        //If maps are empty an error occured
+        if (container.maps.size==0) {
+            toast("An error occurred while downloading! \nReopen the app to try again!")
         } else {
             //Save the timeStamp and songs list
             val preferences = getSharedPreferences("MainFile",Context.MODE_PRIVATE)
@@ -574,6 +618,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             //Save the current song
             json = gson.toJson(currentSong)
             editor.putString("CurrentSong", json)
+            editor.apply()
+            //downloadMap is now false
+            editor.putBoolean("downloadMap", false)
             editor.apply()
         }
         //Placemarkers and markers have now been loaded
@@ -636,14 +683,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     fun drawMap(){
-        //Clear the map
-        for (marker in markers){
-            if (marker!=null){
-                marker.remove()
-            }
-        }
-        //Reset the markers
-        markers = ArrayList<Marker?>()
         //Draw the map
         for (i in placemarkers.indices) {
             var placemark = placemarkers[i].first
@@ -658,6 +697,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             else{
                 markers.add(i,null)
             }
+        }
+        //Make the button appear if a marker is in the circle
+        if (inCircle(mLastLocation)){
+            collect.visibility = View.VISIBLE
+            collect_text.visibility = View.VISIBLE
         }
     }
 

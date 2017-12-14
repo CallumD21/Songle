@@ -87,8 +87,8 @@
     <string name="ach5_text">Take 10,000 steps</string>
     <string name="ach6_text1">Guess a song right</string>
     <string name="ach6_text2">first time</string>
-    <string name="ach7_text1">Guess a song having only</string>
-    <string name="ach7_text2">collected one word</string>
+    <string name="ach7_text1">"Correctly guess a song having "</string>
+    <string name="ach7_text2">only collected one word</string>
     <string name="ach8_text1">Collect all the words</string>
     <string name="ach8_text2">to a song</string>
     <string name="fab_text">Collect</string>
