@@ -86,6 +86,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var distanceWalked = 0.0f
     //The number of achievements
     private val numAch = 8
+    //Marker for the users location
+    private lateinit var myLocation : Marker
 
     companion object {
         //List of collected words for this song
@@ -131,6 +133,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (!inCircle(mLastLocation)){
                 collect.visibility = View.GONE
                 collect_text.visibility = View.GONE
+            }
+
+            //The second achievement is to collect a word
+            if (achievements[1]!=100.0){
+                achievements[1]=100.0
+                toast(R.string.ach)
             }
         }
 
@@ -332,6 +340,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         changeSong()
 
+        //The third achievement is to correctly guess a song
+        if (achievements[2]!=100.0){
+            achievements[2]=100.0
+            toast(R.string.ach)
+        }
     }
 
     private fun changeSong(){
@@ -420,20 +433,59 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 distanceWalked = distanceWalked + current.distanceTo(mLastLocation)
                 //Round to the nearest integer
                 //0.762 is the average step length in meters
-                this.nav_view.menu.findItem(R.id.nav_walk).title = distanceWalked.div(0.762).toInt().toString()+" steps"
+                val steps = distanceWalked.div(0.762).toInt()
+                this.nav_view.menu.findItem(R.id.nav_walk).title = steps.toString()+" steps"
+                if (steps>0){
+                    //If the walking achievements have not been completed update their progress
+                    //The first achievement is to do a step
+                    if (achievements[0]!=100.0){
+                        achievements[0]= 100.0
+                        toast(R.string.ach)
+                    }
+                    //The fourth achievement is to do 1,000 step
+                    if (achievements[3]!=100.0){
+                        if (steps>=1000){
+                            achievements[3]=100.0
+                            toast(R.string.ach)
+                        }
+                        else{
+                            //The percentage of the achievement completed
+                            achievements[3]=(steps/1000.0)*100
+                        }
+                    }
+                    //The fifth achievement is to do 10,000 step
+                    if (achievements[4]!=100.0){
+                        if (steps>=10000){
+                            achievements[4]=100.0
+                            toast(R.string.ach)
+                        }
+                        else{
+                            //The percentage of the achievement completed
+                            achievements[4]=(steps/10000.0)*100
+                        }
+                    }
+                }
             }
             val position = LatLng(current.latitude,current.longitude)
-            //If first time this function has been called initalize the circle
+            //If first time this function has been called initialize the circle and myLocation
             if (locationChanged){
                 val circleOptions = CircleOptions()
                 circle = mMap.addCircle(circleOptions
                         .center(position)
                         .radius(20.0)
                         .strokeColor(Color.parseColor("#673AB7")))
+                val marker = MarkerOptions().position(LatLng(current.latitude,current.longitude))
+                //Set the marker icon as the location image and anchor centers the image to the point
+                //zIndex brings the location marker above the word markers so it is clear where the user is
+                marker.icon(BitmapDescriptorFactory.fromResource(R.mipmap.location))
+                        .anchor(0.5f,0.5f)
+                        .zIndex(1f)
+                myLocation = mMap.addMarker(marker)
                 locationChanged = false
             }
-            //Move the circle
+            //Move the circle and location marker
             circle.center = position
+            myLocation.position = LatLng(current.latitude,current.longitude)
             mLastLocation=current
             //If a point is within the circle of radius 20 centered at the users location then
             //display the collect button
@@ -446,7 +498,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 collect_text.visibility = View.GONE
             }
         }
-        //DO SOMETHING
     }
 
     override fun onConnectionSuspended(flag : Int) {
@@ -470,15 +521,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onMapReady(googleMap: GoogleMap) {
         mapReady = true
         mMap = googleMap
-
-        try {
-            //Show current position
-            mMap.isMyLocationEnabled = true
-        } catch (se : SecurityException) {
-            Log.i("MYAPP","Security exception thrown [onMapReady]")
-        }
-        //Add ”My location” button to the user interface
-        mMap.uiSettings.isMyLocationButtonEnabled = true
 
         //Zoom in on the play area
         val zoomLevel = 15.5f;
