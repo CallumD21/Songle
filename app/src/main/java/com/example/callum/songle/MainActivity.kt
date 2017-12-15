@@ -85,9 +85,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     //The total distance the user has walked while playing the game. Is used to calculate steps made
     private var distanceWalked = 0.0f
     //The number of achievements
-    private val numAch = 8
+    private val numAch = 20
     //Marker for the users location
     private lateinit var myLocation : Marker
+    //The total number of words in the song
+    private var totalWords = 0
+    //True if the user has not yet had a guess of the song
+    private var firstGuess = true
 
     companion object {
         //List of collected words for this song
@@ -140,6 +144,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 achievements[1]=100.0
                 toast(R.string.ach)
             }
+            //The eighth achievement is to collect all the words to the song
+            if (achievements[7]!=100.0){
+                if (wordsList.size==totalWords){
+                    achievements[7]=100.0
+                    toast(R.string.ach)
+                }
+                else{
+                    //The percentage of the achievement completed
+                    achievements[7]=(wordsList.size/totalWords.toDouble())*100
+                }
+            }
+
         }
 
         val toggle = ActionBarDrawerToggle(
@@ -283,6 +299,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 //If the user presses give up open an anko dialog
                 alert("Are you sure you want to give up on this song?", "Give up!") {
                     positiveButton("Yes") {
+                        //The 12th achievement is to give up on a song
+                        if (achievements[11]!=100.0){
+                            achievements[11]= 100.0
+                            toast(R.string.ach)
+                        }
                         changeSong()
                     }
                     negativeButton("No") {
@@ -361,11 +382,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             achievements[6]=100.0
             toast(R.string.ach)
         }
+        //The sixth achievement is to correctly guess the song first try
+        if (achievements[5]!=100.0 && firstGuess){
+            achievements[5]=100.0
+            toast(R.string.ach)
+        }
 
         changeSong()
     }
 
     private fun changeSong(){
+        //Reset the progress on the eighth achievement if it has not yet been completed
+        if (achievements[7]!=100.0){
+            achievements[7]=0.0
+        }
         //Reset the collected words for the song
         wordsList = ArrayList<String>()
         //-2 tells collected words to clear the screen
@@ -378,6 +408,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Reset the placemarkers and markers
         markers = ArrayList<Marker?>()
+        placemarkers = ArrayList<Pair<Placemark,Bitmap?>>()
         //Clear the map files by saving empty maps
         val maps = ArrayList<ArrayList<Pair<Placemark,Bitmap?>>>()
         val map = ArrayList<Pair<Placemark,Bitmap?>>()
@@ -422,6 +453,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val button = layout.incorrectButton
         //When the button is pressed close the dialog
         button.setOnClickListener { dialog.dismiss() }
+        //First guess is not not true
+        firstGuess=false
         dialog.show()
     }
 
@@ -458,22 +491,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         catch (ise : IllegalStateException){
             Log.i("MYAPP","IllegalStateException thrown [onConnected]")
         }
-        //See if we can access the users location
-        if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient)
-        } else {
+        //If we cant access the users location then ask for permission
+        if(ContextCompat.checkSelfPermission(this,android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION)
         }
     }
 
     override fun onLocationChanged(current : Location?) {
         if(current == null){
-            //DO SOMETHING ELSE
-            Log.i("MYAPP","[onLocationChanged] Location is unknown")
+            toast("Cannot determine your location!")
         } else {
             //Update the distance walked
-            //If it is the first time this function is run then the users steps shouldnt change
-            if (mLastLocation!=null && !locationChanged){
+            if (mLastLocation!=null){
                 distanceWalked = distanceWalked + current.distanceTo(mLastLocation)
                 //Round to the nearest integer
                 //0.762 is the average step length in meters
@@ -508,6 +537,33 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             achievements[4]=(steps/10000.0)*100
                         }
                     }
+                }
+                //The location of the castle's gatehouse
+                val castle = Location("Castle")
+                castle.latitude = 55.94853
+                castle.longitude = -3.19868
+                //The ninth achievement is to go to the castle so be within 40 meters of the castle gate
+                if (achievements[8]!=100.0 && castle.distanceTo(current)<=40){
+                    achievements[8]=100.0
+                    toast(R.string.ach)
+                }
+                //The location of Waverly
+                val waverly = Location("Waverly")
+                waverly.latitude = 55.95200
+                waverly.longitude = -3.18997
+                //The tenth achievement is to go to waverly so be within 70 meters it
+                if (achievements[9]!=100.0 && waverly.distanceTo(current)<=70){
+                    achievements[9]=100.0
+                    toast(R.string.ach)
+                }
+                //The location of Arthur's seat
+                val arthurs = Location("Arthur's")
+                arthurs.latitude = 55.94403
+                arthurs.longitude = -3.16209
+                //The 11th achievement is to go to Arthur's seat so be within 40 meters it
+                if (achievements[10]!=100.0 && arthurs.distanceTo(current)<=40){
+                    achievements[10]=100.0
+                    toast(R.string.ach)
                 }
             }
             val position = LatLng(current.latitude,current.longitude)
@@ -615,10 +671,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     break
                 }
             }
+            //The song has now changed so firstGuess is true
+            firstGuess = true
             //Save the current song
             json = gson.toJson(currentSong)
             editor.putString("CurrentSong", json)
-            editor.apply()
+            //The total number of words in the song is the number of placemarkers in map5
+            totalWords = container.maps[4].size
+            editor.putInt("totalWords",totalWords)
             //downloadMap is now false
             editor.putBoolean("downloadMap", false)
             editor.apply()
@@ -715,6 +775,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         //Load the distanceWalked
         distanceWalked = preferences.getFloat("distanceWalked",0.0f)
+        //Load the totalWords
+        totalWords = preferences.getInt("totalWords",0)
+        //Load firstGuess
+        firstGuess = preferences.getBoolean("firstGuess",true)
         //Round to the nearest integer
         //0.762 is the average step length in meters
         this.nav_view.menu.findItem(R.id.nav_walk).title = distanceWalked.div(0.762).toInt().toString()+" steps"
@@ -814,6 +878,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         //Save the achievement progress
         json = gson.toJson(achievements)
         editor.putString("AchievementProgress", json)
+        //Save firstGuess
+        editor.putBoolean("firstGuess",firstGuess)
         editor.apply()
         //Save the current map to the activeMap folder
         saveMap(activeMap)

@@ -29,6 +29,11 @@ class AchievementActivity : AppCompatActivity() {
         pb6.progress=MainActivity.achievements[5].toInt()
         pb7.progress=MainActivity.achievements[6].toInt()
         pb8.progress=MainActivity.achievements[7].toInt()
+        pb9.progress=MainActivity.achievements[8].toInt()
+        pb10.progress=MainActivity.achievements[9].toInt()
+        pb11.progress=MainActivity.achievements[10].toInt()
+        pb12.progress=MainActivity.achievements[11].toInt()
+        pb13.progress=MainActivity.achievements[12].toInt()
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
